@@ -1,6 +1,33 @@
-# TAPD 本地私有配置与运行时状态（勿提交）
-.tapd/project_config.json
-.tapd/tapd_env.json
-.tapd/submit_state.json
-.tapd/*.xlsx
-.tapd/root_cause_categories_*.json
+# ── TAPD 本地运行时状态 ──────────────────────────
+# 忽略 .tapd/ 下所有本地文件，仅保留初始化模板
+.tapd/*
+!.tapd/project_config.template.json
+!.tapd/tapd_env.template.json
+
+# ── Python ─────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+
+# ── 环境变量 / 密钥 ─────────────────────────────
+.env
+.env.*
+
+# ── 生成物 ─────────────────────────────────────
+*.xmind
+
+# ── 操作系统 ───────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# ── 编辑器 ─────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*~
