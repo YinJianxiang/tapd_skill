@@ -1,0 +1,64 @@
+{
+  "workspace_id": "66882899",
+  "query": "自动书单列表首日VIP退订率字段无返回值 自动投放书单支持分投放方式查看数据 自动书单列表首日VIP退订率列为空",
+  "stories_total": 799,
+  "best_match": {
+    "id": "1166882899001022116",
+    "name": "自动投放书单支持分投放方式查看数据",
+    "status": "planning",
+    "owner": "贾庆同;",
+    "score": 0.9115,
+    "confidence": "high",
+    "url": "https://www.tapd.cn/66882899/prong/stories/view/1166882899001022116"
+  },
+  "confidence": "high",
+  "auto_link": true,
+  "candidates": [
+    {
+      "id": "1166882899001022116",
+      "name": "自动投放书单支持分投放方式查看数据",
+      "status": "planning",
+      "owner": "贾庆同;",
+      "score": 0.9115,
+      "confidence": "high",
+      "url": "https://www.tapd.cn/66882899/prong/stories/view/1166882899001022116"
+    },
+    {
+      "id": "1166882899001017295",
+      "name": "字节媒体spi订阅-新账户数据自动订阅连山云",
+      "status": "status_2",
+      "owner": "刘森;",
+      "score": 0.1523,
+      "confidence": "low",
+      "url": "https://www.tapd.cn/66882899/prong/stories/view/1166882899001017295"
+    },
+    {
+      "id": "1166882899001016727",
+      "name": "自动投放素材表更新频率优化",
+      "status": "status_2",
+      "owner": "刘晓旭_20240410033730;",
+      "score": 0.1398,
+      "confidence": "low",
+      "url": "https://www.tapd.cn/66882899/prong/stories/view/1166882899001016727"
+    },
+    {
+      "id": "1166882899001020523",
+      "name": "客户端小说自动捞书功能+自动投放优化",
+      "status": "status_2",
+      "owner": "未分配",
+      "score": 0.1388,
+      "confidence": "low",
+      "url": "https://www.tapd.cn/66882899/prong/stories/view/1166882899001020523"
+    },
+    {
+      "id": "1166882899001007591",
+      "name": "自动同步投放书籍和投放短剧上下架状态",
+      "status": "status_2",
+      "owner": "未分配",
+      "score": 0.1388,
+      "confidence": "low",
+      "url": "https://www.tapd.cn/66882899/prong/stories/view/1166882899001007591"
+    }
+  ],
+  "source": "name_match"
+}

@@ -1,0 +1,6 @@
+# TAPD 本地私有配置与运行时状态（勿提交）
+.tapd/project_config.json
+.tapd/tapd_env.json
+.tapd/submit_state.json
+.tapd/*.xlsx
+.tapd/root_cause_categories_*.json

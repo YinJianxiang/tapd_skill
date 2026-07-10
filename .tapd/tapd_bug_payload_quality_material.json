@@ -1,0 +1,10 @@
+{
+  "title": "优质素材圈选未选择到相关素材",
+  "summary": "自动补素材任务执行圈优质素材时，按筛选条件查询后原始命中数为0，未圈选到任何优质素材。",
+  "description": "问题描述：全域投放自动补素材任务执行素材圈选时，「圈优质素材」步骤未命中任何素材（原始命中数:0），导致优质素材未被选中参与补素材。<br/><br/>复现步骤：<br/>1) 触发自动补素材扫描任务（如 TTAUTOFILLMATSCAN20260710155204）<br/>2) 执行素材圈选逻辑，包含圈新素材、圈三方素材、圈优质素材等步骤<br/>3) 查看圈优质素材（ruleId=4）的筛选结果<br/><br/>实际结果：<br/>- 服务：TtAutoFillMaterialSelectServiceImpl<br/>- 圈新素材：projectId=2466，结果数 162<br/>- 圈三方素材：projectId=2466，结果数 2<br/>- 圈优质素材：ruleId=4，projectId=2466，bookId=41000003649，原始命中数:0，去重截取后:0<br/>- 筛选条件包含：sourceType=video、时长/大小/码率/宽高比限制、plineFormList（kyyplay/xmtplay/syhplay/cpsdy等）、limitSize=3、按 consume_360day 排序等（详见日志截图）<br/>- 操作人：高广旭（新媒体-自投）<br/>（见截图）<br/><br/>期望结果：在存在符合条件优质素材的情况下，圈优质素材应能正常命中并返回素材列表；若确实无素材，应有明确日志/告警说明筛选无结果原因，不应影响补素材流程判断。<br/><br/>影响范围：全域投放自动补素材 - 优质素材圈选逻辑",
+  "module": "后端",
+  "current_owner": "杨建雷",
+  "story_id": "1166882899001022570",
+  "priority": "medium",
+  "severity": "serious"
+}

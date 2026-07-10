@@ -1,0 +1,24 @@
+{
+  "workspace_id": "",
+  "defaults": {
+    "reporter": "",
+    "version": "",
+    "iteration": "",
+    "label": "",
+    "name": ""
+  },
+  "module_owner_map": {},
+  "module_field_map": {},
+  "link_story": {
+    "enabled": true,
+    "match_scope": "iteration",
+    "fallback_project": true
+  },
+  "embed_images": {
+    "enabled": true,
+    "also_attach": false
+  },
+  "attachments": {
+    "enabled": false
+  }
+}

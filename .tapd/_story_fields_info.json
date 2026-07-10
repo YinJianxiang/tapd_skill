@@ -1,0 +1,1466 @@
+{
+  "status": 1,
+  "data": {
+    "id": {
+      "name": "id",
+      "options": [],
+      "html_type": "input",
+      "label": "ID",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "name": {
+      "name": "name",
+      "options": [],
+      "html_type": "input",
+      "label": "标题",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "status": {
+      "name": "status",
+      "options": {
+        "planning": "规划中",
+        "status_2": "需求设计",
+        "status_5": "需求开发中",
+        "status_6": "需求测试中",
+        "status_7": "需求验收",
+        "status_8": "需求已上线",
+        "status_9": "需求挂起",
+        "status_15": "已提测",
+        "status_20": "需求作废"
+      },
+      "html_type": "select",
+      "label": "状态",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "description": {
+      "name": "description",
+      "options": [],
+      "html_type": "rich_edit",
+      "label": "详细描述",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "owner": {
+      "name": "owner",
+      "options": [],
+      "html_type": "user_chooser",
+      "label": "处理人",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": "",
+      "user_options": []
+    },
+    "creator": {
+      "name": "creator",
+      "options": [],
+      "html_type": "user_chooser",
+      "label": "创建人",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "created": {
+      "name": "created",
+      "options": {
+        "为空": "为空",
+        "不为空": "不为空"
+      },
+      "html_type": "datetime",
+      "label": "创建时间",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "iteration_id": {
+      "name": "iteration_id",
+      "options": {
+        "1166882899001001471": "【国内智投】26-06（当前迭代）",
+        "1166882899001001439": "【国内智投】26-05",
+        "1166882899001001420": "【国内智投】26年4月需求",
+        "1166882899001001382": "【国内智投】26-03",
+        "1166882899001001356": "【国内智投】26-01月需求",
+        "1166882899001001310": "【国内智投】25-12月需求",
+        "1166882899001001273": "【国内智投】2025-11月需求",
+        "1166882899001001226": "【海外2025】10月需求",
+        "1166882899001001236": "【国内智投】2025-10月需求",
+        "1166882899001001184": "【国内智投】2025-9月需求",
+        "1166882899001001180": "【海外2025】9月需求",
+        "1166882899001001156": "【国内智投】2025-8月需求",
+        "1166882899001001147": "【海外2025】8月需求",
+        "1166882899001001123": "【国内智投】2025-7月需求",
+        "1166882899001001115": "【海外2025】7月需求",
+        "1166882899001001087": "【海外2025】6月需求",
+        "1166882899001001090": "【国内智投】2025-6月需求",
+        "1166882899001001063": "【海外2025】5月需求",
+        "1166882899001001071": "【国内智投】2025-5月需求",
+        "1166882899001001046": "【国内智投】4月需求",
+        "1166882899001001042": "【海外2025】4月需求",
+        "1166882899001001015": "【国内智投】3月需求",
+        "1166882899001001008": "【海外2025】3月需求",
+        "1166882899001000989": "【国内智投】2月需求",
+        "1166882899001000984": "【海外2025】2月需求",
+        "1166882899001000969": "【海外2025】1月需求",
+        "1166882899001000946": "【国内智投】1月需求",
+        "1166882899001000967": "【国内智投】12月需求",
+        "1166882899001000936": "【海外2024】12月需求",
+        "1166882899001000911": "【海外2024】11月需求",
+        "1166882899001000909": "【国内智投】11月需求",
+        "1166882899001000879": "【国内智投】10月需求",
+        "1166882899001000871": "【海外2024】10月需求",
+        "1166882899001000852": "【国内智投】9月需求",
+        "1166882899001000842": "【海外2024】9月需求",
+        "1166882899001000818": "【国内智投】8月需求",
+        "1166882899001000814": "【海外2024】8月需求",
+        "1166882899001000784": "【海外2024】7月需求",
+        "1166882899001000743": "国内智投六月第一期需求",
+        "1166882899001000734": "【海外2024】6月需求",
+        "1166882899001000727": "【海外2024】5月需求",
+        "1166882899001000713": "国内智投5月第一期需求",
+        "1166882899001000702": "国内智投4月第二期需求",
+        "1166882899001000687": "国内智投4月第一期需求",
+        "1166882899001000675": "国内智投3月第二期需求",
+        "1166882899001000636": "国内智投业务线3月第一期需求",
+        "1166882899001000634": "智投业务线需求2月第二期需求",
+        "1166882899001000639": "批量创建v2.2",
+        "1166882899001000637": "海外智投业务2月第二期需求",
+        "1166882899001000621": "智投业务线需求2月第一期",
+        "1166882899001000620": "智投业务线需求1月第二期",
+        "1166882899001000615": "批量创建v2.1",
+        "1166882899001000614": "智投业务线需求1月第一期需求",
+        "1166882899001000584": "【批量创建】v2",
+        "1166882899001000570": "【海外】11月需求",
+        "1166882899001000521": "【海外】10月第一期需求",
+        "1166882899001000457": "九月第二期需求",
+        "1166882899001000488": "【海外】智投9月第一期需求",
+        "1166882899001000456": "九月第一期需求",
+        "1166882899001000449": "八月第二期需求",
+        "1166882899001000448": "八月第一期需求",
+        "1166882899001000404": "七月第二期需求",
+        "1166882899001000402": "七月第一期需求",
+        "1166882899001000388": "6月第二期需求",
+        "1166882899001000379": "6月第一期需求",
+        "1166882899001000358": "5月第二期需求",
+        "1166882899001000349": "5月第一期需求",
+        "1166882899001000345": "4月底需求",
+        "1166882899001000326": "4月第二周业务需求v3.0.1",
+        "1166882899001000325": "4月第一周业务需求v3.0.0"
+      },
+      "html_type": "select",
+      "label": "迭代",
+      "pure_options": [
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100039500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】26-06",
+          "value": "1166882899001001471",
+          "label": "【国内智投】26-06（当前迭代）",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100039400000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】26-05",
+          "value": "1166882899001001439",
+          "label": "【国内智投】26-05",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100039300000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】26年4月需求",
+          "value": "1166882899001001420",
+          "label": "【国内智投】26年4月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100039200000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】26-03",
+          "value": "1166882899001001382",
+          "label": "【国内智投】26-03",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100039100000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】26-01月需求",
+          "value": "1166882899001001356",
+          "label": "【国内智投】26-01月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100039000000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】25-12月需求",
+          "value": "1166882899001001310",
+          "label": "【国内智投】25-12月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038900000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2025-11月需求",
+          "value": "1166882899001001273",
+          "label": "【国内智投】2025-11月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038700000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】10月需求",
+          "value": "1166882899001001226",
+          "label": "【海外2025】10月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038800000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2025-10月需求",
+          "value": "1166882899001001236",
+          "label": "【国内智投】2025-10月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038600000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2025-9月需求",
+          "value": "1166882899001001184",
+          "label": "【国内智投】2025-9月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】9月需求",
+          "value": "1166882899001001180",
+          "label": "【海外2025】9月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038400000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2025-8月需求",
+          "value": "1166882899001001156",
+          "label": "【国内智投】2025-8月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038300000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】8月需求",
+          "value": "1166882899001001147",
+          "label": "【海外2025】8月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038200000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2025-7月需求",
+          "value": "1166882899001001123",
+          "label": "【国内智投】2025-7月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038100000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】7月需求",
+          "value": "1166882899001001115",
+          "label": "【海外2025】7月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037900000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】6月需求",
+          "value": "1166882899001001087",
+          "label": "【海外2025】6月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100038000000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2025-6月需求",
+          "value": "1166882899001001090",
+          "label": "【国内智投】2025-6月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037700000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】5月需求",
+          "value": "1166882899001001063",
+          "label": "【海外2025】5月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037800000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2025-5月需求",
+          "value": "1166882899001001071",
+          "label": "【国内智投】2025-5月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037600000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】4月需求",
+          "value": "1166882899001001046",
+          "label": "【国内智投】4月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】4月需求",
+          "value": "1166882899001001042",
+          "label": "【海外2025】4月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037400000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】3月需求",
+          "value": "1166882899001001015",
+          "label": "【国内智投】3月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037300000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】3月需求",
+          "value": "1166882899001001008",
+          "label": "【海外2025】3月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037200000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】2月需求",
+          "value": "1166882899001000989",
+          "label": "【国内智投】2月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037100000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】2月需求",
+          "value": "1166882899001000984",
+          "label": "【海外2025】2月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100037000000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2025】1月需求",
+          "value": "1166882899001000969",
+          "label": "【海外2025】1月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036800000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】1月需求",
+          "value": "1166882899001000946",
+          "label": "【国内智投】1月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036900000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】12月需求",
+          "value": "1166882899001000967",
+          "label": "【国内智投】12月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036600000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】12月需求",
+          "value": "1166882899001000936",
+          "label": "【海外2024】12月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】11月需求",
+          "value": "1166882899001000911",
+          "label": "【海外2024】11月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036400000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】11月需求",
+          "value": "1166882899001000909",
+          "label": "【国内智投】11月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036300000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】10月需求",
+          "value": "1166882899001000879",
+          "label": "【国内智投】10月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036200000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】10月需求",
+          "value": "1166882899001000871",
+          "label": "【海外2024】10月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036100000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】9月需求",
+          "value": "1166882899001000852",
+          "label": "【国内智投】9月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100036000000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】9月需求",
+          "value": "1166882899001000842",
+          "label": "【海外2024】9月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035900000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【国内智投】8月需求",
+          "value": "1166882899001000818",
+          "label": "【国内智投】8月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035800000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】8月需求",
+          "value": "1166882899001000814",
+          "label": "【海外2024】8月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035700000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】7月需求",
+          "value": "1166882899001000784",
+          "label": "【海外2024】7月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035600000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "国内智投六月第一期需求",
+          "value": "1166882899001000743",
+          "label": "国内智投六月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】6月需求",
+          "value": "1166882899001000734",
+          "label": "【海外2024】6月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035400000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外2024】5月需求",
+          "value": "1166882899001000727",
+          "label": "【海外2024】5月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035300000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "国内智投5月第一期需求",
+          "value": "1166882899001000713",
+          "label": "国内智投5月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035200000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "国内智投4月第二期需求",
+          "value": "1166882899001000702",
+          "label": "国内智投4月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035100000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "国内智投4月第一期需求",
+          "value": "1166882899001000687",
+          "label": "国内智投4月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100035000000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "国内智投3月第二期需求",
+          "value": "1166882899001000675",
+          "label": "国内智投3月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034700000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "国内智投业务线3月第一期需求",
+          "value": "1166882899001000636",
+          "label": "国内智投业务线3月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034600000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "智投业务线需求2月第二期需求",
+          "value": "1166882899001000634",
+          "label": "智投业务线需求2月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034900000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "批量创建v2.2",
+          "value": "1166882899001000639",
+          "label": "批量创建v2.2",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034800000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "海外智投业务2月第二期需求",
+          "value": "1166882899001000637",
+          "label": "海外智投业务2月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "智投业务线需求2月第一期",
+          "value": "1166882899001000621",
+          "label": "智投业务线需求2月第一期",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034400000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "智投业务线需求1月第二期",
+          "value": "1166882899001000620",
+          "label": "智投业务线需求1月第二期",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034300000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "批量创建v2.1",
+          "value": "1166882899001000615",
+          "label": "批量创建v2.1",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034200000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "智投业务线需求1月第一期需求",
+          "value": "1166882899001000614",
+          "label": "智投业务线需求1月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034100000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【批量创建】v2",
+          "value": "1166882899001000584",
+          "label": "【批量创建】v2",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100034000000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外】11月需求",
+          "value": "1166882899001000570",
+          "label": "【海外】11月需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033900000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外】10月第一期需求",
+          "value": "1166882899001000521",
+          "label": "【海外】10月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033700000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "九月第二期需求",
+          "value": "1166882899001000457",
+          "label": "九月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033800000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "【海外】智投9月第一期需求",
+          "value": "1166882899001000488",
+          "label": "【海外】智投9月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033600000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "九月第一期需求",
+          "value": "1166882899001000456",
+          "label": "九月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "八月第二期需求",
+          "value": "1166882899001000449",
+          "label": "八月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033400000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "八月第一期需求",
+          "value": "1166882899001000448",
+          "label": "八月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033300000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "七月第二期需求",
+          "value": "1166882899001000404",
+          "label": "七月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033200000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "七月第一期需求",
+          "value": "1166882899001000402",
+          "label": "七月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033100000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "6月第二期需求",
+          "value": "1166882899001000388",
+          "label": "6月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100033000000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "6月第一期需求",
+          "value": "1166882899001000379",
+          "label": "6月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100032900000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "5月第二期需求",
+          "value": "1166882899001000358",
+          "label": "5月第二期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100032800000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "5月第一期需求",
+          "value": "1166882899001000349",
+          "label": "5月第一期需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100032700000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "4月底需求",
+          "value": "1166882899001000345",
+          "label": "4月底需求",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100032600000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "4月第二周业务需求v3.0.1",
+          "value": "1166882899001000326",
+          "label": "4月第二周业务需求v3.0.1",
+          "panel": 0
+        },
+        {
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sort": "100032500000",
+          "workitem_type_id": "1166882899001000045",
+          "plan_app_id": "0",
+          "origin_name": "4月第一周业务需求v3.0.0",
+          "value": "1166882899001000325",
+          "label": "4月第一周业务需求v3.0.0",
+          "panel": 0
+        }
+      ],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "modified": {
+      "name": "modified",
+      "options": {
+        "为空": "为空",
+        "不为空": "不为空"
+      },
+      "html_type": "datetime",
+      "label": "最后修改时间",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "priority": {
+      "name": "priority",
+      "html_type": "select",
+      "label": "优先级",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": "",
+      "color_options": [
+        {
+          "value": "High",
+          "label": "High",
+          "color": "#FF6770"
+        },
+        {
+          "value": "Middle",
+          "label": "Middle",
+          "color": "#28AB80"
+        },
+        {
+          "value": "Low",
+          "label": "Low",
+          "color": "#7C8597"
+        },
+        {
+          "value": "Nice To Have",
+          "label": "Nice To Have",
+          "color": "#7C8597"
+        }
+      ],
+      "options": {
+        "4": "High",
+        "3": "Middle",
+        "2": "Low",
+        "1": "Nice To Have"
+      }
+    },
+    "cc": {
+      "name": "cc",
+      "options": [],
+      "html_type": "mix_chooser",
+      "label": "抄送人",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "begin": {
+      "name": "begin",
+      "options": {
+        "为空": "为空",
+        "不为空": "不为空"
+      },
+      "html_type": "dateinput",
+      "label": "预计开始",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "due": {
+      "name": "due",
+      "options": {
+        "为空": "为空",
+        "不为空": "不为空"
+      },
+      "html_type": "dateinput",
+      "label": "预计结束",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "workitem_type_id": {
+      "name": "workitem_type_id",
+      "options": {
+        "1166882899001000035": "需求"
+      },
+      "html_type": "select",
+      "label": "需求类别",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "children_id": {
+      "name": "children_id",
+      "options": [],
+      "html_type": "input",
+      "label": "子需求",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "completed": {
+      "name": "completed",
+      "options": {
+        "为空": "为空",
+        "不为空": "不为空"
+      },
+      "html_type": "datetime",
+      "label": "完成时间",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "parent_id": {
+      "name": "parent_id",
+      "options": [],
+      "html_type": "input",
+      "label": "父需求",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "business_value": {
+      "name": "business_value",
+      "options": [],
+      "html_type": "integer",
+      "label": "业务价值",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "has_attachment": {
+      "name": "has_attachment",
+      "options": {
+        "1": "-不为空-",
+        "0": "-空-"
+      },
+      "html_type": "checkbox",
+      "label": "附件",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "size": {
+      "name": "size",
+      "options": [],
+      "html_type": "integer",
+      "label": "规模",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "feature": {
+      "name": "feature",
+      "options": [],
+      "html_type": "select",
+      "label": "特性",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "test_focus": {
+      "name": "test_focus",
+      "options": [],
+      "html_type": "textarea",
+      "label": "测试重点",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "developer": {
+      "name": "developer",
+      "options": [],
+      "html_type": "user_chooser",
+      "label": "开发人员",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": "",
+      "user_options": []
+    },
+    "category_id": {
+      "name": "category_id",
+      "options": {
+        "1166882899001000207": "业务需求",
+        "1166882899001000208": "批量创建需求",
+        "1166882899001000209": "新增功能",
+        "1166882899001000210": "优化需求",
+        "1166882899001000212": "头条",
+        "1166882899001000213": "广点通",
+        "1166882899001000262": "内部需求",
+        "1166882899001000263": "新增功能",
+        "1166882899001000264": "优化需求",
+        "1166882899001000313": "海外智投",
+        "1166882899001000314": "国内智投",
+        "1166882899001000315": "业务需求",
+        "1166882899001000316": "新增需求",
+        "1166882899001000317": "优化需求",
+        "1166882899001000378": "AI方向",
+        "-1": "未分类"
+      },
+      "html_type": "select",
+      "label": "分类",
+      "pure_options": [
+        {
+          "name": "业务需求",
+          "id": "1166882899001000207",
+          "parent_id": "1166882899001000314",
+          "workspace_id": "66882899",
+          "sorting": "2",
+          "label": "业务需求",
+          "value": "1166882899001000207"
+        },
+        {
+          "name": "批量创建需求",
+          "id": "1166882899001000208",
+          "parent_id": "1166882899001000314",
+          "workspace_id": "66882899",
+          "sorting": "1",
+          "label": "批量创建需求",
+          "value": "1166882899001000208"
+        },
+        {
+          "name": "新增功能",
+          "id": "1166882899001000209",
+          "parent_id": "1166882899001000207",
+          "workspace_id": "66882899",
+          "sorting": "1",
+          "label": "新增功能",
+          "value": "1166882899001000209"
+        },
+        {
+          "name": "优化需求",
+          "id": "1166882899001000210",
+          "parent_id": "1166882899001000207",
+          "workspace_id": "66882899",
+          "sorting": "2",
+          "label": "优化需求",
+          "value": "1166882899001000210"
+        },
+        {
+          "name": "头条",
+          "id": "1166882899001000212",
+          "parent_id": "1166882899001000208",
+          "workspace_id": "66882899",
+          "sorting": "0",
+          "label": "头条",
+          "value": "1166882899001000212"
+        },
+        {
+          "name": "广点通",
+          "id": "1166882899001000213",
+          "parent_id": "1166882899001000208",
+          "workspace_id": "66882899",
+          "sorting": "1",
+          "label": "广点通",
+          "value": "1166882899001000213"
+        },
+        {
+          "name": "内部需求",
+          "id": "1166882899001000262",
+          "parent_id": "1166882899001000314",
+          "workspace_id": "66882899",
+          "sorting": "0",
+          "label": "内部需求",
+          "value": "1166882899001000262"
+        },
+        {
+          "name": "新增功能",
+          "id": "1166882899001000263",
+          "parent_id": "1166882899001000262",
+          "workspace_id": "66882899",
+          "sorting": "0",
+          "label": "新增功能",
+          "value": "1166882899001000263"
+        },
+        {
+          "name": "优化需求",
+          "id": "1166882899001000264",
+          "parent_id": "1166882899001000262",
+          "workspace_id": "66882899",
+          "sorting": "0",
+          "label": "优化需求",
+          "value": "1166882899001000264"
+        },
+        {
+          "name": "海外智投",
+          "id": "1166882899001000313",
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sorting": "1",
+          "label": "海外智投",
+          "value": "1166882899001000313"
+        },
+        {
+          "name": "国内智投",
+          "id": "1166882899001000314",
+          "parent_id": "0",
+          "workspace_id": "66882899",
+          "sorting": "3",
+          "label": "国内智投",
+          "value": "1166882899001000314"
+        },
+        {
+          "name": "业务需求",
+          "id": "1166882899001000315",
+          "parent_id": "1166882899001000313",
+          "workspace_id": "66882899",
+          "sorting": "0",
+          "label": "业务需求",
+          "value": "1166882899001000315"
+        },
+        {
+          "name": "新增需求",
+          "id": "1166882899001000316",
+          "parent_id": "1166882899001000315",
+          "workspace_id": "66882899",
+          "sorting": "0",
+          "label": "新增需求",
+          "value": "1166882899001000316"
+        },
+        {
+          "name": "优化需求",
+          "id": "1166882899001000317",
+          "parent_id": "1166882899001000315",
+          "workspace_id": "66882899",
+          "sorting": "0",
+          "label": "优化需求",
+          "value": "1166882899001000317"
+        },
+        {
+          "name": "AI方向",
+          "id": "1166882899001000378",
+          "parent_id": "1166882899001000314",
+          "workspace_id": "66882899",
+          "sorting": "3",
+          "label": "AI方向",
+          "value": "1166882899001000378"
+        }
+      ],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "module": {
+      "name": "module",
+      "options": {
+        "模块1": "模块1"
+      },
+      "html_type": "select",
+      "label": "模块",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "version": {
+      "name": "version",
+      "options": {
+        "【国内智投】26-06": "【国内智投】26-06",
+        "【国内智投】26-05": "【国内智投】26-05",
+        "【国内智投】26年4月需求": "【国内智投】26年4月需求",
+        "【国内智投】26-03": "【国内智投】26-03",
+        "【国内智投】26-01月需求": "【国内智投】26-01月需求",
+        "国内智投25-12月需求": "国内智投25-12月需求",
+        "【国内智投】2025-11月需求": "【国内智投】2025-11月需求",
+        "【国内智投】2025-10月需求": "【国内智投】2025-10月需求",
+        "【海外2025】10月需求": "【海外2025】10月需求",
+        "【国内智投】2025-9月需求": "【国内智投】2025-9月需求",
+        "【海外2025】9月需求": "【海外2025】9月需求",
+        "【国内智投】2025-8月需求": "【国内智投】2025-8月需求",
+        "【海外2025】8月需求": "【海外2025】8月需求",
+        "【国内智投】2025-7月需求": "【国内智投】2025-7月需求",
+        "【海外2025】7月需求": "【海外2025】7月需求",
+        "【国内智投】2025-6月需求": "【国内智投】2025-6月需求",
+        "【海外2025】6月需求": "【海外2025】6月需求",
+        "【国内智投】2025-5月需求": "【国内智投】2025-5月需求",
+        "【海外智投】Y25-5月需求": "【海外智投】Y25-5月需求",
+        "【国内智投】4月需求": "【国内智投】4月需求",
+        "【海外智投】4月需求": "【海外智投】4月需求",
+        "【国内智投】3月需求": "【国内智投】3月需求",
+        "【海外智投】3月需求": "【海外智投】3月需求",
+        "【国内智投】2月续期": "【国内智投】2月续期",
+        "【海外智投】2月需求": "【海外智投】2月需求",
+        "【海外智投】1月需求": "【海外智投】1月需求",
+        "【国内智投】1月需求": "【国内智投】1月需求",
+        "【国内智投】12月需求": "【国内智投】12月需求",
+        "【海外智投】12月需求": "【海外智投】12月需求",
+        "【海外智投】11月需求": "【海外智投】11月需求",
+        "【国内智投】11月需求": "【国内智投】11月需求",
+        "【国内智投】10月需求": "【国内智投】10月需求",
+        "【海外智投】10月需求": "【海外智投】10月需求",
+        "【国内智投】9月需求": "【国内智投】9月需求",
+        "【海外智投】9月需求": "【海外智投】9月需求",
+        "【国内智投】8月需求": "【国内智投】8月需求",
+        "【海外智投】8月需求": "【海外智投】8月需求",
+        "【海外智投】7月需求": "【海外智投】7月需求",
+        "国内智投六月第一期需求": "国内智投六月第一期需求",
+        "【海外智投】6月需求": "【海外智投】6月需求",
+        "【海外智投】5月需求": "【海外智投】5月需求",
+        "国内智投5月第一期需求": "国内智投5月第一期需求",
+        "国内智投4月第二期需求": "国内智投4月第二期需求",
+        "4月第一期需求": "4月第一期需求",
+        "国内智投3月第二期需求": "国内智投3月第二期需求",
+        "批量创建v2.2": "批量创建v2.2",
+        "海外智投业务2月第二期需求": "海外智投业务2月第二期需求",
+        "国内智投业务线3月第一期需求": "国内智投业务线3月第一期需求",
+        "智投业务线需求2月第二期需求": "智投业务线需求2月第二期需求",
+        "智投业务线需求2月第一期": "智投业务线需求2月第一期",
+        "智投业务线需求1月第二期": "智投业务线需求1月第二期",
+        "批量创建v2.1": "批量创建v2.1",
+        "智投业务线需求1月第一期需求": "智投业务线需求1月第一期需求",
+        "【批量创建】v2": "【批量创建】v2",
+        "【海外】11月需求": "【海外】11月需求",
+        "【海外】10月第一期需求": "【海外】10月第一期需求",
+        "版本1": "版本1"
+      },
+      "html_type": "select",
+      "label": "版本",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "label": {
+      "name": "label",
+      "options": {
+        "重复bug": "重复bug",
+        "无需解决": "无需解决",
+        "无法重现": "无法重现",
+        "简单问题": "简单问题",
+        "阻塞": "阻塞",
+        "开发受阻": "开发受阻",
+        "有风险": "有风险",
+        "等待设计走查": "等待设计走查",
+        "方案已沟通": "方案已沟通",
+        "等待转测": "等待转测"
+      },
+      "html_type": "multi_select",
+      "label": "标签",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": ""
+    },
+    "custom_field_one": {
+      "name": "custom_field_one",
+      "options": {
+        "为空": "为空",
+        "不为空": "不为空"
+      },
+      "html_type": "datetime",
+      "label": "提测时间",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": "",
+      "memo": ""
+    },
+    "custom_field_two": {
+      "name": "custom_field_two",
+      "options": {
+        "为空": "为空",
+        "不为空": "不为空"
+      },
+      "html_type": "datetime",
+      "label": "上线时间",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": "",
+      "memo": ""
+    },
+    "priority_label": {
+      "name": "priority_label",
+      "options": {
+        "High": "High",
+        "Middle": "Middle",
+        "Low": "Low",
+        "Nice To Have": "Nice To Have"
+      },
+      "html_type": "select",
+      "label": "优先级",
+      "pure_options": [],
+      "readonly": 0,
+      "is_formula_field": 0,
+      "formula_field_tip": "",
+      "color_options": [
+        {
+          "value": "High",
+          "label": "High",
+          "color": "#FF6770"
+        },
+        {
+          "value": "Middle",
+          "label": "Middle",
+          "color": "#28AB80"
+        },
+        {
+          "value": "Low",
+          "label": "Low",
+          "color": "#7C8597"
+        },
+        {
+          "value": "Nice To Have",
+          "label": "Nice To Have",
+          "color": "#7C8597"
+        }
+      ]
+    }
+  },
+  "info": "success"
+}
