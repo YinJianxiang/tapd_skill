@@ -11,6 +11,8 @@
   "module_field_map": {},
   "link_story": {
     "enabled": true,
+    "story_id": "",
+    "story_name": "",
     "match_scope": "iteration",
     "fallback_project": true
   },

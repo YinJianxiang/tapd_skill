@@ -486,6 +486,13 @@ def load_payload(args: argparse.Namespace, config: Dict[str, Any]) -> Dict[str, 
         for key in ("match_scope", "fallback_project"):
             if key not in payload and link_cfg.get(key) is not None:
                 payload[key] = link_cfg[key]
+        # story_id / story_name / story_url：payload/CLI 优先，否则读 link_story 配置
+        for key in ("story_id", "story_name", "story_url"):
+            if str(payload.get(key, "")).strip():
+                continue
+            cfg_val = str(link_cfg.get(key, "")).strip()
+            if cfg_val:
+                payload[key] = link_cfg[key]
 
     return payload
 
@@ -628,6 +635,11 @@ def link_bug_to_story(
     preview = dry_run and (not str(bug.get("id", "")).strip() or str(bug.get("id", "")).strip() == "dry-run")
 
     story, match_meta = resolve_story(client, link_payload, bug, iteration_id)
+    if link_payload.get("story_link_from_config"):
+        match_meta["link_from_config"] = True
+        src = str(match_meta.get("source", "")).strip()
+        if src and not src.startswith("config_"):
+            match_meta["source"] = f"config_{src}"
     story_id = normalize_long_id(client, workspace_id, str(story.get("id", "")))
     match_meta.setdefault("story_url", build_story_url(workspace_id, story_id))
 
@@ -689,12 +701,31 @@ def link_bug_to_story(
     return result
 
 
+def _pick_story_link_field(
+    submit_payload: Dict[str, Any],
+    link_cfg: Dict[str, Any],
+    key: str,
+) -> Tuple[Optional[Any], Optional[str]]:
+    """返回值：(字段值, 来源 submit|config|None)。"""
+    submit_val = str(submit_payload.get(key, "")).strip()
+    if submit_val:
+        return submit_payload[key], "submit"
+    cfg_val = str(link_cfg.get(key, "")).strip()
+    if cfg_val:
+        return link_cfg[key], "config"
+    return None, None
+
+
 def build_link_payload_from_config(
     config: Dict[str, Any],
     submit_payload: Dict[str, Any],
     extra: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """从提 bug payload + project_config 组装关联参数。"""
+    """从提 bug payload + project_config 组装关联参数。
+
+    需求关联优先级：submit payload/CLI > link_story 配置 > 自动标题匹配。
+    link_story.story_id / story_name / story_url 为空时走自动匹配。
+    """
     link_cfg = config.get("link_story", {})
     if not isinstance(link_cfg, dict):
         link_cfg = {}
@@ -705,9 +736,20 @@ def build_link_payload_from_config(
         "fallback_project": link_cfg.get("fallback_project", True),
     }
 
-    for key in ("story_id", "story_name", "story_url", "query", "iteration"):
+    story_from_config = False
+    for key in ("story_id", "story_name", "story_url"):
+        val, source = _pick_story_link_field(submit_payload, link_cfg, key)
+        if val is not None:
+            out[key] = val
+            if source == "config":
+                story_from_config = True
+
+    for key in ("query", "iteration"):
         if str(submit_payload.get(key, "")).strip():
             out[key] = submit_payload[key]
+
+    if story_from_config:
+        out["story_link_from_config"] = True
 
     if link_cfg.get("force"):
         out["force"] = True

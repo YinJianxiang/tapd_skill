@@ -36,6 +36,10 @@ description: >-
 | `story_url` | 需求链接 |
 | `story_name` | 需求标题（精确或唯一模糊命中） |
 
+也可在 `project_config.json` → `link_story` 中配置 `story_id` / `story_name`（非空时直接关联；为空则走自动匹配）。
+
+**优先级**：payload/CLI > `link_story` 配置 > 自动标题匹配。
+
 可选：
 
 - `query`：覆盖自动匹配的查询文本（默认 = 缺陷标题 + 描述摘要）
@@ -131,6 +135,7 @@ python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
 - 已关联同一需求时脚本**不会重复创建**。
 - 自动匹配默认限定 `defaults.iteration` 内需求；迭代内得分偏低时会 **fallback** 到全项目（`link_story.fallback_project`，默认 true）。
 - 可选配置 `project_config.json` → `link_story.match_scope`：`iteration`（默认）或 `project`。
+- `link_story.story_id` / `story_name`：项目级固定关联；与 payload 同时存在时 payload 优先。
 - relations 参数：`source_type=story`、`target_type=bug`。
 
 ## 依赖

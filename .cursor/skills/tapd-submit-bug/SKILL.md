@@ -110,7 +110,23 @@ description: >-
 | 高置信度匹配 | 自动 `POST relations` 写入「关联需求」 |
 | 中/低置信度 | **不自动关联**，返回 `story_link.action=need_confirm` 与候选列表 |
 | payload 含 `story_id` / `story_name` | 直接关联指定需求 |
+| `link_story.story_id` / `story_name` 已配置（非空） | 直接关联配置中的需求（优先于自动匹配） |
+| 配置与 payload 均为空 | 按缺陷标题/描述自动匹配（原逻辑） |
 | `--no-link-story` 或 `link_story.enabled=false` | 跳过 |
+
+**关联优先级**：payload/CLI `story_id`/`story_name` > `project_config.json` → `link_story.story_id`/`story_name` > 自动标题匹配。
+
+配置示例（固定关联某需求；留空则自动匹配）：
+
+```json
+"link_story": {
+  "enabled": true,
+  "story_id": "1166882899001022203",
+  "story_name": "河马智擎自动化",
+  "match_scope": "iteration",
+  "fallback_project": true
+}
+```
 
 关闭自动关联：
 
