@@ -304,7 +304,6 @@ python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py `
   ├── tapd_env.json              # 本地生成，勿提交
   ├── project_config.json       # 本地生成，勿提交
   └── submit_state.json         # 提单幂等状态，自动生成
-scripts/                 # 其他辅助脚本
 ```
 
 各 Skill 目录下通常包含 `SKILL.md`（给 Agent 的说明）与 `scripts/`（可执行 Python）。
