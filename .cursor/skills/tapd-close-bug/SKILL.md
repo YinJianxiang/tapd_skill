@@ -137,7 +137,7 @@ python ".cursor/skills/tapd-close-bug/scripts/close_bug.py" `
 
 ### 与 submit-bug 的衔接
 
-- 若本会话刚执行过 `submit_bug_with_attachment.py`，优先用返回的 `bug_id` / `bug_url`。
+- 若本会话刚执行过 `submit_bug.py`，优先用返回的 `bug_id` / `bug_url`。
 - 若用户说「把刚才提交的关了」，读取 `submit_state.json` 按 `updated_at` 倒序取最近 1 条或用户指定条数。
 - 同一 `idempotency_key` 对应唯一 `bug_id`，勿重复加入批量列表。
 

@@ -628,7 +628,7 @@ def link_bug_to_story(
     match_only: bool = False,
 ) -> Dict[str, Any]:
     """
-    搜索并（可选）关联需求。供 link_bug_story.py 与 submit_bug_with_attachment.py 共用。
+    搜索并（可选）关联需求。供 link_bug_story.py 与 submit_bug.py 共用。
     link_payload 可含 story_id / story_name / query / force / match_scope / fallback_project。
     """
     bug_id = normalize_long_id(client, workspace_id, str(bug.get("id", "")))

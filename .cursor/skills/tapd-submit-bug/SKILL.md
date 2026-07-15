@@ -10,7 +10,7 @@ description: >-
 # TAPD Submit Bug Skill
 
 聚焦 TAPD 缺陷提交与附件上传场景。基于 TAPD 开放 API 与 `tapd_client_stdlib.py`，完成「创建 bug → 上传附件 → **搜索并关联需求** → 返回链接」的标准流程。
-优先使用通用包装脚本 `scripts/submit_bug_with_attachment.py`，避免 Windows PowerShell 下中文参数直传引起的乱码或转义问题。
+优先使用通用包装脚本 `scripts/submit_bug.py`，避免 Windows PowerShell 下中文参数直传引起的乱码或转义问题。
 
 ## 何时使用
 
@@ -131,7 +131,7 @@ description: >-
 关闭自动关联：
 
 ```powershell
-python ".../submit_bug_with_attachment.py" --no-link-story ...
+python ".../submit_bug.py" --no-link-story ...
 ```
 
 或在 `project_config.json`：
@@ -234,7 +234,7 @@ $payload = Join-Path $env:TEMP "tapd_bug_payload.json"
 }
 '@ | Set-Content -Encoding UTF8 $payload
 
-python "{baseDir}/scripts/submit_bug_with_attachment.py" `
+python "{baseDir}/scripts/submit_bug.py" `
   --payload-file $payload `
   --file "C:\path\to\screenshot.jpg"
 ```
@@ -255,7 +255,7 @@ $payload = Join-Path $env:TEMP "tapd_bug_payload_min.json"
 }
 '@ | Set-Content -Encoding UTF8 $payload
 
-python "{baseDir}/scripts/submit_bug_with_attachment.py" `
+python "{baseDir}/scripts/submit_bug.py" `
   --payload-file $payload `
   --config-file ".tapd/project_config.json" `
   --file "C:\path\to\screenshot.jpg" `
@@ -266,7 +266,7 @@ python "{baseDir}/scripts/submit_bug_with_attachment.py" `
 
 ```powershell
 $env:PYTHONIOENCODING = "utf-8"
-python "{baseDir}/scripts/submit_bug_with_attachment.py" `
+python "{baseDir}/scripts/submit_bug.py" `
   --payload-file $payload `
   --config-file ".tapd/project_config.json" `
   --file "C:\path\to\screenshot.jpg" `
@@ -292,7 +292,7 @@ cat > "$payload" <<'EOF'
 }
 EOF
 
-python3 "{baseDir}/scripts/submit_bug_with_attachment.py" \
+python3 "{baseDir}/scripts/submit_bug.py" \
   --payload-file "$payload" \
   --file "/path/to/screenshot.jpg"
 ```
@@ -334,7 +334,7 @@ python ".cursor/skills/tapd-plus/scripts/tapd_client_stdlib.py" upload-attachmen
 - `upload-attachment` 的 `--type` 必须是 `bug`，不要与其他接口参数混用。
 - 若只使用 `setx` 设置过 `TAPD_ACCESS_TOKEN`，当前会话拿不到变量时，脚本会尝试从 `HKCU\Environment` 读取。
 - 若实例字段有定制（如严重程度候选值），应按项目实际配置传值。
-- 推荐优先使用 `submit_bug_with_attachment.py --payload-file ...` 传中文字段，减少 PowerShell 引号与编码干扰。
+- 推荐优先使用 `submit_bug.py --payload-file ...` 传中文字段，减少 PowerShell 引号与编码干扰。
 - 示例中统一使用 `{baseDir}`，避免写死 `.cursor` 导致跨仓库复用困难。
 - 支持参数优先级：CLI 显式参数 > payload 字段 > 本地配置默认值。
 - `module` 已提供但未命中 `module_owner_map` 时会报错，避免负责人为空直接提单。
