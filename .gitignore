@@ -3,6 +3,7 @@
 .tapd/*
 !.tapd/project_config.template.json
 !.tapd/tapd_env.template.json
+!.tapd/feishu_bot.template.json
 
 # ── Python ─────────────────────────────────────
 __pycache__/
@@ -23,6 +24,13 @@ env/
 # ── 生成物 ─────────────────────────────────────
 *.xmind
 *.xlsx
+*.log
+
+# ── Python 打包 / 覆盖率 ───────────────────────
+build/
+dist/
+*.egg-info/
+.coverage
 
 # ── 操作系统 ───────────────────────────────────
 Thumbs.db

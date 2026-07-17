@@ -1,319 +1,247 @@
-# TAPD Skills
+# TAPD 自动化工具集
 
-基于 TAPD 开放 API 的自动化工具集，供 **Cursor** / **Claude Code**（以及 Codebuddy）在对话中完成缺陷提单、关单、统计、关联需求等操作。脚本仅依赖 Python 标准库，无需额外安装依赖。
+本项目包含两类能力：
 
-## 功能一览
+1. **飞书机器人**：在飞书会话中查询、提交和关闭 TAPD 缺陷，并管理个人配置。
+2. **Agent Skills**：在 Cursor、Claude Code 或 CodeBuddy 中通过自然语言调用 TAPD 能力。
 
-| Skill | 说明 | 典型说法 |
-|-------|------|----------|
-| `tapd-config-init` | 初始化或升级本地项目配置 | 「初始化配置」「改后端负责人」 |
-| `tapd-submit-bug` | 提交缺陷，支持截图内嵌与自动关联需求 | 「帮我提个 bug」「截图提单」 |
-| `tapd-link-bug-story` | 将缺陷与需求（story）建立关联 | 「关联需求」「绑定 story」 |
-| `tapd-close-bug` | 关闭或解决缺陷（单个/批量） | 「把 bug 关了」「标记已解决」 |
-| `tapd-bug-stats` | 按时间、负责人、平台等统计并导出 Excel | 「统计本周未解决缺陷」 |
-| `tapd-plus` | 通用 TAPD API：需求、任务、迭代、评论、工时等 | 「查一下当前迭代需求」 |
+项目脚本基于 Python 标准库实现，无需安装额外 Python 依赖。
 
-配置完成后，在 Agent 对话里直接描述需求即可，会自动加载对应 Skill 并执行脚本，**无需手动开 CMD**。
+> 安全提示：仓库中只应提交模板和源码。访问令牌、应用密钥、用户标识、项目 ID、回调域名及个人配置必须保存在本地配置中，禁止写入 README、模板示例、日志或提交记录。
 
 ---
 
-## 快速开始
+# 第一部分：飞书机器人
 
-### 前置条件
+## 功能
 
-- Python 3.8+
-- 已安装 [Cursor](https://cursor.com) 和/或 [Claude Code](https://code.claude.com)
-- 本仓库作为独立工作区打开，或把 Skills 拷贝/软链到你的业务项目中
+- 通过表单或自然语言提交缺陷，支持图片。
+- 按关键词、缺陷 ID、时间范围或当前迭代查询缺陷和需求。
+- 对符合条件的缺陷发起关闭操作。
+- 通过交互卡片预览并确认写操作。
+- 按飞书用户隔离 LLM、TAPD 和项目配置。
+- 使用操作 ID 防止重复提交。
 
-### 1. 配置认证
+群聊中需要 @机器人；私聊可直接使用。
 
-复制模板并填写 TAPD 凭证：
+## 准备配置
+
+复制机器人配置模板：
 
 ```powershell
-copy .tapd\tapd_env.template.json .tapd\tapd_env.json
+Copy-Item .tapd\feishu_bot.template.json .tapd\feishu_bot.json
 ```
 
-编辑 `.tapd/tapd_env.json`：
+在本地填写 `.tapd/feishu_bot.json`。主要配置项如下：
 
-```json
-{
-  "access_token": "你的_TAPD_Access_Token",
-  "api_user": "",
-  "api_password": "",
-  "api_base_url": "",
-  "base_url": "",
-  "current_user_nick": ""
-}
+- `app_id`：飞书应用标识。
+- `app_secret`：飞书应用密钥。
+- `verification_token`：事件订阅校验令牌。
+- `encrypt_key`：开启事件加密时使用。
+- `listen_host`、`listen_port`：本地服务监听地址和端口。
+- `llm`：兼容 OpenAI API 的模型地址、模型名和密钥。
+- `menu_event_keys`：机器人菜单事件映射。
+- `config_editable_paths`：允许用户通过机器人修改的项目配置字段。
+
+同时准备 TAPD 认证和项目配置：
+
+```powershell
+Copy-Item .tapd\tapd_env.template.json .tapd\tapd_env.json
+Copy-Item .tapd\project_config.template.json .tapd\project_config.json
 ```
 
-| 字段 | 说明 |
-|------|------|
-| `access_token` | **推荐**。TAPD 个人 Access Token |
-| `api_user` + `api_password` | 备选：API 账号 + 密码（未填 token 时使用） |
-| `api_base_url` | 可选，默认 `https://api.tapd.cn` |
-| `base_url` | 可选，默认 `https://www.tapd.cn`（用于拼缺陷链接） |
-| `current_user_nick` | 可选，当前用户昵称 |
+请直接编辑本地文件，不要把真实值写入模板或命令行示例。
 
-> 也可通过环境变量覆盖（优先级高于本地文件）：`TAPD_ACCESS_TOKEN`、`TAPD_API_USER`、`TAPD_API_PASSWORD` 等。填写本地 JSON 后，一般**无需**再 `setx` 环境变量。
+## 飞书开放平台配置
 
-### 2. 初始化项目配置
+创建应用后，按实际需要开通以下能力并发布应用版本：
+
+- 接收机器人私聊和群聊消息。
+- 以应用身份发送消息。
+- 获取和下载消息中的图片或文件。
+- 接收机器人自定义菜单事件。
+
+事件订阅地址：
+
+```text
+https://<你的回调域名>/feishu/event
+```
+
+卡片交互回调地址：
+
+```text
+https://<你的回调域名>/feishu/card
+```
+
+建议配置以下菜单事件：
+
+| 菜单 | event_key |
+|------|-----------|
+| 使用帮助 | `help` |
+| 提 Bug | `submit_bug` |
+| 查 Bug | `query_bug` |
+| 查需求 | `query_story` |
+| 关 Bug | `close_bug` |
+| 查看配置 | `config_view` |
+| 修改配置 | `config_edit` |
+| 账号配置 | `account_view` |
+| 取消草稿 | `cancel_draft` |
+
+## 启动服务
+
+先通过可信的反向代理或内网穿透工具暴露本地端口，再启动服务：
+
+```powershell
+$env:PYTHONIOENCODING = "utf-8"
+python scripts\feishu_bug_bot\server.py
+```
+
+本地健康检查：
+
+```text
+http://127.0.0.1:<监听端口>/health
+```
+
+生产或长期运行时应使用 HTTPS，并限制回调入口的访问范围。
+
+## 使用方式
+
+- 菜单「提 Bug」：填写表单并确认后提交。
+- 自然语言描述缺陷：生成草稿和确认卡片。
+- 菜单「查 Bug / 查需求」：按条件查询并返回列表。
+- 菜单「关 Bug」：选择缺陷、预览并确认关闭。
+- 菜单「账号配置」：维护当前用户自己的 LLM 和 TAPD 配置。
+- 「取消」：清除当前未提交草稿。
+
+所有写操作均应在卡片或文字确认后执行。确认或取消后，原操作应失效。
+
+## 多用户配置
+
+全局配置用于提供默认值，个人配置保存在：
+
+```text
+.tapd/users/<用户标识>.json
+```
+
+个人配置可覆盖项目、LLM 和 TAPD 认证字段。界面只显示脱敏结果，不应回显完整密钥。用户标识及个人配置文件均不得提交到 Git。
+
+机器人代码位于 `scripts/feishu_bug_bot/`。
+
+---
+
+# 第二部分：Agent Skills
+
+## Skill 一览
+
+| Skill | 用途 | 示例说法 |
+|-------|------|----------|
+| `tapd-config-init` | 初始化或升级项目配置 | 「初始化 TAPD 配置」 |
+| `tapd-submit-bug` | 提交缺陷并处理图片、附件和需求关联 | 「帮我提个 bug」 |
+| `tapd-link-bug-story` | 将缺陷关联到需求 | 「把这个 bug 关联需求」 |
+| `tapd-close-bug` | 关闭或解决单个、多个缺陷 | 「把刚才的 bug 关掉」 |
+| `tapd-bug-stats` | 统计缺陷并导出 Excel | 「统计本周未解决缺陷」 |
+| `tapd-plus` | 查询或更新 TAPD 通用实体 | 「查询当前迭代需求」 |
+
+## 准备认证
+
+从模板创建本地认证文件：
+
+```powershell
+Copy-Item .tapd\tapd_env.template.json .tapd\tapd_env.json
+```
+
+认证文件支持个人访问令牌，或 API 账号与密码。推荐使用权限范围最小、可定期轮换的令牌。
+
+也可以通过环境变量提供认证信息。环境变量优先于本地配置文件。不要在 README、脚本参数、终端截图或日志中展示真实凭证。
+
+## 初始化项目配置
+
+运行初始化脚本：
 
 ```powershell
 python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py
 ```
 
-会从模板生成/补齐 `.tapd/project_config.json`。再编辑必填项，例如：
+脚本会从模板创建或补齐 `.tapd/project_config.json`。主要字段包括：
 
-```json
-{
-  "workspace_id": "你的项目ID",
-  "defaults": {
-    "reporter": "张三",
-    "version": "【示例项目】26-06",
-    "iteration": "【示例项目】26-06",
-    "label": "",
-    "name": "示例产品"
-  },
-  "module_owner_map": {
-    "前端": "李四",
-    "后端": "王五"
-  },
-  "module_field_map": {},
-  "link_story": {
-    "enabled": true,
-    "story_id": "",
-    "story_name": "",
-    "match_scope": "iteration",
-    "fallback_project": true
-  },
-  "embed_images": {
-    "enabled": true,
-    "also_attach": false
-  },
-  "attachments": {
-    "enabled": false
-  }
-}
+- `workspace_id`：TAPD 项目标识。
+- `defaults`：提单人、版本、迭代、标签和标题前缀。
+- `module_owner_map`：模块到负责人的映射。
+- `module_field_map`：模块级自定义字段。
+- `link_story`：自动关联需求的策略。
+- `embed_images`：图片内嵌策略。
+- `attachments`：附件上传策略。
+
+项目名称、人员姓名、项目 ID、迭代名称等信息只应填写在本地配置中。
+
+## 接入 Cursor
+
+本仓库已经包含 `.cursor/skills/`。使用 Cursor 打开仓库后，可直接在 Agent 对话中描述任务。
+
+如需在其他项目使用，可将所需 Skill 复制到：
+
+```text
+<项目根目录>/.cursor/skills/<skill-name>/
 ```
 
-也可用命令快速改字段（会覆盖）：
+也可以安装到个人 Skill 目录。无论采用哪种方式，都应在包含本地 `.tapd/` 配置的项目根目录中运行。
+
+## 接入 Claude Code
+
+将 Skills 复制到项目目录：
 
 ```powershell
-python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py `
-  --set "defaults.name=示例产品" `
-  --set "module_owner_map.后端=王五"
-```
-
-或对话里说：「把标题前缀改成示例产品，后端负责人改成王五」。
-
-### 3. 接入 Cursor / Claude 并开始使用
-
-配置就绪后，把本仓库的 Skills 放到对应工具能发现的目录，再在对话里用自然语言即可。
-
-#### Cursor
-
-本仓库已自带 `.cursor/skills/`，用 Cursor **打开本仓库**（或把该目录拷到业务项目的 `.cursor/skills/`）即可。
-
-| 范围 | 路径 |
-|------|------|
-| 项目级（推荐） | `<项目根>/.cursor/skills/<skill-name>/SKILL.md` |
-| 个人全局 | `~/.cursor/skills/<skill-name>/SKILL.md` |
-
-使用方式：
-
-1. 用 Cursor 打开已配置好的项目工作区。
-2. 打开 Agent / Chat，用自然语言描述任务（见下方示例）。
-3. Agent 会根据 `SKILL.md` 的 `description` 自动匹配并加载对应 Skill，再执行脚本。
-4. 也可在对话中显式点名，例如「用 tapd-submit-bug 提个缺陷」。
-
-示例：
-
-- 「登录页白屏，帮我提个 bug，截图在桌面」
-- 「先预览草稿，确认后再提交」
-- 「统计本周我创建的未解决缺陷」
-- 「把刚才那个 bug 关了」
-- 「把 bug 12345 关联到需求『用户登录优化』」
-
-#### Claude Code
-
-Claude Code 从 `.claude/skills/`（项目）或 `~/.claude/skills/`（个人）加载 Skills，格式与 Cursor 相同（目录 + `SKILL.md`）。
-
-任选一种接入方式：
-
-```powershell
-# 方式 A：项目级 — 把仓库内 Skills 同步到 .claude/skills
 New-Item -ItemType Directory -Force .claude\skills | Out-Null
 Copy-Item -Recurse .cursor\skills\* .claude\skills\
-
-# 方式 B：个人全局 — 拷到用户目录（对所有项目生效）
-New-Item -ItemType Directory -Force $HOME\.claude\skills | Out-Null
-Copy-Item -Recurse .cursor\skills\* $HOME\.claude\skills\
 ```
 
-| 范围 | 路径 |
-|------|------|
-| 项目级 | `<项目根>/.claude/skills/<skill-name>/SKILL.md` |
-| 个人全局 | `~/.claude/skills/<skill-name>/SKILL.md` |
+然后在项目根目录启动 Claude Code，并通过自然语言或 Skill 名称调用。
 
-使用方式：
+## 接入 CodeBuddy
 
-1. 在项目根目录启动 Claude Code（`claude`）。
-2. 可用 `/skills` 确认已加载 `tapd-submit-bug` 等 Skill。
-3. 直接说自然语言，或用 `/tapd-submit-bug` 这类命令显式调用。
-4. 认证与项目配置仍走工作区根目录下的 `.tapd/`（与 Cursor 共用同一套配置即可）。
+仓库中的 `.codebuddy/skills/` 为 CodeBuddy 使用的 Skill 副本。配置方式与其他 Agent 相同，并共用项目根目录下的本地 `.tapd/` 配置。
 
-> **提示**：Skill 脚本通过相对路径解析仓库根目录下的 `.tapd/`。请在**配置了 `.tapd/` 的项目根**里对话；若 Skills 装在全局目录，仍建议在业务项目根启动 Agent，以便读到本地配置。
+## 常见对话
 
-#### Codebuddy
+- 「登录页面白屏，先生成缺陷草稿。」
+- 「确认提交，并关联到匹配的需求。」
+- 「统计本周我创建的未解决缺陷。」
+- 「把指定缺陷标记为已解决。」
+- 「查询当前迭代的需求。」
 
-本仓库同时维护 `.codebuddy/skills/` 副本，用 Codebuddy 打开本仓库即可，用法与 Cursor 类似。
+具体字段、匹配规则和命令参数见各 Skill 目录中的 `SKILL.md`。
 
 ---
 
-## 配置说明
+# 本地文件与安全边界
 
-本地文件均在 `.tapd/` 下（模板可提交，本地文件已加入 `.gitignore`，**勿提交**）。
+| 文件或目录 | 用途 | 是否提交 |
+|------------|------|----------|
+| `.tapd/*.template.json` | 无真实值的配置模板 | 是 |
+| `.tapd/tapd_env.json` | TAPD 认证信息 | 否 |
+| `.tapd/project_config.json` | 项目和人员配置 | 否 |
+| `.tapd/feishu_bot.json` | 飞书与 LLM 配置 | 否 |
+| `.tapd/users/` | 用户标识和个人配置 | 否 |
+| `.tapd/feishu_inbox/` | 消息图片缓存 | 否 |
+| `.tapd/submit_state.json` | 提单幂等状态 | 否 |
+| `*.log` | 本地日志 | 否 |
 
-| 文件 | 用途 | 是否提交 |
-|------|------|----------|
-| `tapd_env.template.json` | 认证模板 | ✅ |
-| `tapd_env.json` | 认证凭证 | ❌ |
-| `project_config.template.json` | 项目配置模板 | ✅ |
-| `project_config.json` | 项目默认值与映射 | ❌ |
-| `submit_state.json` | 提单幂等状态（自动生成） | ❌ |
+安全要求：
 
-### `project_config.json` 字段
+- 模板中的令牌、密码、密钥和应用标识必须保持为空或使用明显占位符。
+- 不要提交本地配置、缓存、导出文件、日志或调试数据。
+- 不要在日志中记录请求头、完整凭证、用户消息原文或个人标识。
+- 机器人回显密钥时只能显示掩码，不显示完整值或可推断内容。
+- 令牌应使用最小权限并定期轮换；疑似泄露时立即吊销。
+- 提交前使用 `git status` 和 `git diff` 检查待提交内容。
 
-| 路径 | 说明 |
-|------|------|
-| `workspace_id` | **必填**。TAPD 项目 ID |
-| `defaults.reporter` | 默认提单人（同时映射为测试人员 `te`） |
-| `defaults.version` | 发现版本（提交时映射为 `version_report`） |
-| `defaults.iteration` | 迭代名称（与 TAPD 页面一致，脚本会解析为 `iteration_id`） |
-| `defaults.name` | 标题前缀，提交时格式化为 `【name】xxx` |
-| `defaults.label` | 默认缺陷标签（多标签用 `\|` 分隔） |
-| `module_owner_map` | 模块 → 开发负责人，如 `前端` / `后端` |
-| `module_field_map` | 可选，模块级自定义字段 |
-| `link_story.*` | 提 bug 后是否自动关联需求；可固定 `story_id` / `story_name`，留空则按标题自动匹配 |
-| `embed_images.enabled` | 截图是否内嵌到描述「实际结果」（默认 `true`） |
-| `embed_images.also_attach` | 内嵌同时还挂附件区（默认 `false`） |
-| `attachments.enabled` | 是否默认上传到附件区（默认 `false`） |
+# 目录结构
 
-注意：
-
-- **不要**配置 `defaults.module`：模块须由用户或 AI 高置信指定，无配置兜底。
-- `iteration` 填迭代**名称**（不是 ID）。可用 `tapd-plus` 的 `iterations` 核对名称是否与页面一致。
-
-### 获取凭证与 workspace_id
-
-1. **Access Token**：TAPD 个人设置 → API → 生成 Access Token。
-2. **workspace_id**：打开项目任意页面，URL 中 `https://www.tapd.cn/<数字>/...` 里的数字即为项目 ID；或对话里用 `tapd-plus` 查询参与项目。
-
----
-
-## 各 Skill 怎么用
-
-### 初始化 / 改配置 — `tapd-config-init`
-
-```powershell
-# 仅补齐模板缺失字段（不覆盖已有值）
-python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py
-
-# 用 JSON payload 更新
-python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py `
-  --payload-file .tapd\config_update.json
+```text
+.cursor/skills/          Cursor Skills
+.codebuddy/skills/       CodeBuddy Skills
+scripts/feishu_bug_bot/  飞书机器人服务
+.tapd/                   本地配置、模板和运行时状态
 ```
 
-对话示例：
-
-- 「初始化 TAPD 配置」
-- 「默认提单人改成张三」
-- 「前端负责人李四，后端王五」
-
-### 提缺陷 — `tapd-submit-bug`
-
-推荐流程：对话描述问题 → Agent 组装草稿（可 `--dry-run`）→ 你确认 → 正式创建。
-
-行为摘要：
-
-1. 截图默认 `upload_image` 后内嵌到描述「实际结果」
-2. 创建 bug，自动补全负责人（按模块）、测试/开发人员、发现版本等
-3. 创建后自动搜索并关联需求（可配置关闭）
-4. 附件失败时基于 `.tapd/submit_state.json` 幂等恢复，避免重复建单
-
-对话示例：
-
-- 「素材批量上传封面错误，前端 bug，附上截图」
-- 「先 dry-run 看看草稿」
-- 「确认提交」
-- 「附件上传失败，只重传附件」
-
-常用开关：`link_story.enabled=false` 或 `--no-link-story` 可跳过关联需求。
-
-### 关联需求 — `tapd-link-bug-story`
-
-提 bug 后「关联需求」为空，或要单独补绑时使用。
-
-| 定位缺陷 | 指定需求（可选） |
-|----------|------------------|
-| `bug_id` / 链接 / 标题 | `story_id` / 链接 / 标题；都不给则自动匹配当前迭代 |
-
-对话示例：
-
-- 「把刚才的 bug 关联到需求『用户登录优化』」
-- 「bug 1166… 自动匹配关联需求」
-- 「只预览候选，先不关联」
-
-中/低置信度不会自动写关联，会返回候选让你确认。
-
-### 关单 — `tapd-close-bug`
-
-支持按 id、链接、标题或对话上下文定位；默认状态 `closed`，也可 `resolved`。
-
-对话示例：
-
-- 「把 bug 12345 关了，备注：已验证」
-- 「刚才那两个都关了」
-- 「先预览，确认后再关闭」
-
-### 统计 — `tapd-bug-stats`
-
-按创建时间、创建人、软件平台、简单问题标签等筛选，导出 Excel，并在对话中展示明细。
-
-对话示例：
-
-- 「统计本周未解决 bug」
-- 「按平台汇总张三创建的缺陷」
-- 「只要简单问题标签的」
-
-### 通用查询 — `tapd-plus`
-
-需求、任务、缺陷、迭代、评论、工时、Wiki、工作流、企业微信通知等通用能力。具体字段与命令见 `.cursor/skills/tapd-plus/SKILL.md`。
-
----
-
-## 目录结构
-
-```
-.cursor/skills/          # Cursor Agent Skills（主副本）
-.claude/skills/          # Claude Code 使用（需自行从 .cursor/skills 同步）
-.codebuddy/skills/       # Codebuddy 同步副本
-.tapd/                   # 本地配置与运行时状态（多数勿提交）
-  ├── tapd_env.template.json
-  ├── project_config.template.json
-  ├── tapd_env.json              # 本地生成，勿提交
-  ├── project_config.json       # 本地生成，勿提交
-  └── submit_state.json         # 提单幂等状态，自动生成
-```
-
-各 Skill 目录下通常包含 `SKILL.md`（给 Agent 的说明）与 `scripts/`（可执行 Python）。
-
----
-
-## 注意事项
-
-- `.tapd/tapd_env.json`、`.tapd/project_config.json` 含项目与凭证信息，已 gitignore，请勿提交。
-- 环境变量优先级高于本地配置文件。
-- Windows 下中文路径/参数建议由 Agent 走 payload JSON 文件，避免 PowerShell 转义乱码。
-- Cursor 用 `.cursor/skills/`，Claude Code 用 `.claude/skills/`；两边可共用同一套 `.tapd/` 配置。
-- 更细的字段映射、匹配规则与 CLI 参数，见各 Skill 的 `SKILL.md`。
+Python 缓存、日志、导出文件和 `.tapd/` 下的本地配置均应由 `.gitignore` 排除。

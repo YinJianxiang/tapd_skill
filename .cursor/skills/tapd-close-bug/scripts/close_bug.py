@@ -2,6 +2,7 @@
 TAPD 缺陷关闭脚本：
 - 按 bug id / URL / 标题解析目标缺陷（支持批量）
 - 更新 status 为 closed 或 resolved
+- 关闭时将 current_owner 设为 reporter（创建人）
 - 可选追加关闭说明评论
 """
 
@@ -160,6 +161,26 @@ def extract_bug_from_response(resp: Dict[str, Any]) -> Dict[str, Any]:
     return {}
 
 
+def check_tapd_response_error(resp: Dict[str, Any]) -> Optional[str]:
+    if not isinstance(resp, dict):
+        return "TAPD 响应无效"
+    status = resp.get("status")
+    info = str(resp.get("info") or "").strip().lower()
+    if status in (1, "1", None) and info in ("", "success", "ok"):
+        data = resp.get("data")
+        if isinstance(data, dict) and data.get("error"):
+            return str(data.get("error"))[:300]
+        return None
+    err = resp.get("error") or resp.get("info")
+    if isinstance(err, dict):
+        return json.dumps(err, ensure_ascii=False)[:300]
+    if err:
+        return str(err)[:300]
+    if status not in (1, "1", None):
+        return f"TAPD status={status}"
+    return None
+
+
 def fetch_bug_by_id(client: Any, workspace_id: str, bug_id: str) -> Dict[str, Any]:
     long_id = normalize_bug_id(client, workspace_id, bug_id)
     resp = client.request(
@@ -184,7 +205,7 @@ def search_bug_by_title(client: Any, workspace_id: str, title: str) -> Dict[str,
             "workspace_id": workspace_id,
             "title": title_norm,
             "limit": 20,
-            "fields": "id,title,status,current_owner",
+            "fields": "id,title,status,current_owner,reporter",
         },
     )
     data = resp.get("data", [])
@@ -356,6 +377,7 @@ def process_one_target(
     *,
     dry_run: bool,
     show_raw_response: bool,
+    require_resolved: bool = False,
 ) -> Dict[str, Any]:
     workspace_id = str(payload["workspace_id"])
     target_status = str(payload["status"]).strip().lower()
@@ -368,6 +390,9 @@ def process_one_target(
     current_status = str(bug.get("status", "")).strip().lower()
     title = str(bug.get("title", "")).strip()
     owner = str(bug.get("current_owner", "")).strip()
+    reporter = str(bug.get("reporter", "")).strip()
+    # 关闭时处理人保留为创建人（reporter）
+    owner_on_close = reporter or owner
 
     result: Dict[str, Any] = {
         "workspace_id": workspace_id,
@@ -377,6 +402,8 @@ def process_one_target(
         "current_status": current_status,
         "target_status": target_status,
         "current_owner": owner,
+        "reporter": reporter or None,
+        "owner_on_close": owner_on_close or None,
         "comment": comment or None,
         "author": author or None,
     }
@@ -391,33 +418,156 @@ def process_one_target(
         )
         return result
 
+    if require_resolved and current_status != "resolved":
+        result.update(
+            {
+                "skipped": True,
+                "reason": "not_resolved",
+                "message": (
+                    f"缺陷当前状态为 {current_status or '未知'}，"
+                    "仅允许关闭 resolved 状态的缺陷"
+                ),
+            }
+        )
+        return result
+
     if dry_run:
         result["dry_run"] = True
         return result
 
+    update_data: Dict[str, Any] = {
+        "workspace_id": workspace_id,
+        "id": bug_id,
+        "status": target_status,
+    }
+    if owner_on_close:
+        update_data["current_owner"] = owner_on_close
+
+    # #region agent log
+    try:
+        import time as _time
+
+        _log_path = Path(__file__).resolve()
+        for _p in _log_path.parents:
+            if (_p / ".tapd").is_dir():
+                _log_path = _p / "debug-83fe6d.log"
+                break
+        else:
+            _log_path = Path("debug-83fe6d.log")
+        with _log_path.open("a", encoding="utf-8") as _lf:
+            _lf.write(
+                json.dumps(
+                    {
+                        "sessionId": "83fe6d",
+                        "runId": "post-fix",
+                        "hypothesisId": "H_owner_reporter",
+                        "location": "close_bug.py:process_one_target",
+                        "message": "close update payload",
+                        "data": {
+                            "bug_id": bug_id,
+                            "status": target_status,
+                            "prev_owner": owner,
+                            "reporter": reporter,
+                            "owner_on_close": owner_on_close,
+                            "writes_owner": bool(owner_on_close),
+                        },
+                        "timestamp": int(_time.time() * 1000),
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
+
     update_resp = client.request(
         "POST",
         "bugs",
-        data={
-            "workspace_id": workspace_id,
-            "id": bug_id,
-            "status": target_status,
-        },
+        data=update_data,
     )
-    updated = extract_bug_from_response(update_resp)
-    new_status = str(updated.get("status", target_status)).strip().lower()
+    api_err = check_tapd_response_error(update_resp)
+    if api_err:
+        result.update(
+            {
+                "dry_run": False,
+                "skipped": False,
+                "success": False,
+                "error": api_err,
+            }
+        )
+        if show_raw_response:
+            result["raw_response"] = update_resp
+        return result
 
-    comment_id = add_close_comment(client, workspace_id, bug_id, author, comment)
+    verified_bug = fetch_bug_by_id(client, workspace_id, bug_id)
+    new_status = str(verified_bug.get("status", "")).strip().lower()
+    new_owner = str(verified_bug.get("current_owner", "")).strip()
 
+    comment_id: Optional[str] = None
+    comment_error: Optional[str] = None
+    if comment and author:
+        try:
+            comment_id = add_close_comment(client, workspace_id, bug_id, author, comment)
+        except Exception as exc:
+            comment_error = str(exc)
+
+    owner_ok = (not owner_on_close) or (new_owner == owner_on_close)
     result.update(
         {
             "dry_run": False,
             "skipped": False,
             "new_status": new_status,
+            "new_owner": new_owner or None,
             "comment_id": comment_id,
-            "success": new_status in DONE_STATUS_SET,
+            "comment_error": comment_error,
+            "success": new_status == target_status and owner_ok,
         }
     )
+    if new_status != target_status:
+        result["error"] = (
+            f"关闭后状态为 {new_status or '未知'}，目标为 {target_status}"
+        )
+    elif not owner_ok:
+        result["error"] = (
+            f"关闭后处理人为 {new_owner or '空'}，目标为 {owner_on_close}"
+        )
+    # #region agent log
+    try:
+        import time as _time
+
+        _log_path = Path(__file__).resolve()
+        for _p in _log_path.parents:
+            if (_p / ".tapd").is_dir():
+                _log_path = _p / "debug-83fe6d.log"
+                break
+        else:
+            _log_path = Path("debug-83fe6d.log")
+        with _log_path.open("a", encoding="utf-8") as _lf:
+            _lf.write(
+                json.dumps(
+                    {
+                        "sessionId": "83fe6d",
+                        "runId": "post-fix",
+                        "hypothesisId": "H_owner_reporter",
+                        "location": "close_bug.py:process_one_target:verified",
+                        "message": "close verified owner/status",
+                        "data": {
+                            "bug_id": bug_id,
+                            "new_status": new_status,
+                            "new_owner": new_owner,
+                            "owner_on_close": owner_on_close,
+                            "success": result.get("success"),
+                        },
+                        "timestamp": int(_time.time() * 1000),
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
     if show_raw_response:
         result["raw_response"] = update_resp
     return result
@@ -449,6 +599,7 @@ def main() -> None:
     client = load_tapd_client()
 
     targets = collect_targets(payload)
+    require_resolved = bool(payload.get("require_resolved"))
     results: List[Dict[str, Any]] = []
 
     for target in targets:
@@ -460,6 +611,7 @@ def main() -> None:
                     target,
                     dry_run=args.dry_run,
                     show_raw_response=args.show_raw_response,
+                    require_resolved=require_resolved,
                 )
             )
         except Exception as exc:
@@ -476,6 +628,10 @@ def main() -> None:
         if args.dry_run:
             out["dry_run"] = True
         print(json.dumps(out, ensure_ascii=False))
+        if out.get("error") or (
+            not out.get("success") and not out.get("skipped") and not args.dry_run
+        ):
+            sys.exit(1)
         return
 
     summary = summarize_batch(results)
@@ -492,6 +648,8 @@ def main() -> None:
             ensure_ascii=False,
         )
     )
+    if summary.get("failed", 0) > 0 and not args.dry_run:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

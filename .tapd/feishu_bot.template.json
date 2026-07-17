@@ -1,0 +1,36 @@
+{
+  "app_id": "cli_a92436aa387bdceb",
+  "app_secret": "",
+  "verification_token": "",
+  "encrypt_key": "",
+  "listen_host": "127.0.0.1",
+  "listen_port": 8765,
+  "llm": {
+    "base_url": "https://api.deepseek.com/v1",
+    "api_key": "",
+    "model": "deepseek-chat"
+  },
+  "menu_event_keys": {
+    "help": "help",
+    "submit_bug": "submit_bug",
+    "query_bug": "query_bug",
+    "query_story": "query_story",
+    "close_bug": "close_bug",
+    "config_view": "config_view",
+    "config_edit": "config_edit",
+    "account_config": "account_view",
+    "cancel_draft": "cancel_draft"
+  },
+  "config_editable_paths": [
+    "defaults.version",
+    "defaults.iteration",
+    "defaults.name",
+    "defaults.reporter",
+    "module_owner_map.前端",
+    "module_owner_map.后端",
+    "link_story.enabled",
+    "link_story.story_id",
+    "link_story.story_name",
+    "link_story.match_scope"
+  ]
+}
