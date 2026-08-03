@@ -104,6 +104,15 @@ class FeishuClient:
             headers=self._auth_headers(),
         )
 
+    def delay_update_card(self, token: str, card: Dict[str, Any]) -> Dict[str, Any]:
+        """回调响应之后，用 event.token 延时更新用户正在交互的卡片。"""
+        return self._request(
+            "POST",
+            "/interactive/v1/card/update",
+            data={"token": token, "card": card},
+            headers=self._auth_headers(),
+        )
+
     def download_message_resource(
         self,
         message_id: str,

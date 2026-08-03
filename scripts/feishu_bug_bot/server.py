@@ -393,8 +393,11 @@ class BotApp:
         action_name = str(value.get("action") or "").strip()
         path = str(value.get("path") or "").strip()
         operation_id = str(value.get("operation_id") or "").strip()
+        # 延时更新卡片用 event.token（c-…）；header.token 是 verification token
+        update_token = str(event.get("token") or "").strip()
+        btn_name = str(action.get("name") or "")
+        action_from_value = bool(action_name)
         if not action_name and form_value:
-            btn_name = str(action.get("name") or "")
             if btn_name == "btn_submit_bug" or "title" in form_value:
                 action_name = "submit_bug_form"
             elif btn_name == "btn_submit_project_config":
@@ -409,21 +412,29 @@ class BotApp:
             import time as _time
             from submit_bridge import workspace_root as _wr
 
-            with (_wr() / "debug-83fe6d.log").open("a", encoding="utf-8") as _lf:
+            with (_wr() / "debug-031517.log").open("a", encoding="utf-8") as _lf:
                 _lf.write(
                     json.dumps(
                         {
-                            "sessionId": "83fe6d",
+                            "sessionId": "031517",
                             "runId": "post-fix",
-                            "hypothesisId": "H_callback",
+                            "hypothesisId": "H2",
                             "location": "server.py:handle_card_payload",
-                            "message": "card callback received",
+                            "message": "card action resolved",
                             "data": {
                                 "action_name": action_name,
-                                "has_open_id": bool(open_id),
+                                "action_from_value": action_from_value,
+                                "btn_name": btn_name,
+                                "action_tag": str(action.get("tag") or ""),
                                 "form_keys": sorted(form_value.keys())[:20],
-                                "btn_name": str(action.get("name") or ""),
-                                "has_operation_id": bool(operation_id),
+                                "has_open_id": bool(open_id),
+                                "has_update_token": bool(update_token),
+                                "update_token_prefix": (update_token[:6] + "…")
+                                if update_token
+                                else "",
+                                "value_keys": sorted(value.keys())
+                                if isinstance(value, dict)
+                                else [],
                             },
                             "timestamp": int(_time.time() * 1000),
                         },
@@ -447,19 +458,81 @@ class BotApp:
                 path=path,
                 form_value=form_value,
                 operation_id=operation_id,
+                update_token=update_token,
             )
             if not isinstance(result, dict):
                 return {"toast": {"type": "info", "content": str(result)}}
             # 兼容旧返回：纯 toast 字段
-            if "toast" in result or "card" in result:
+            if "toast" in result or "card" in result or result.get("_delay_token"):
                 out: Dict[str, Any] = {}
                 if result.get("toast"):
                     out["toast"] = result["toast"]
                 if result.get("card"):
                     out["card"] = result["card"]
+                if result.get("_delay_token") and result.get("_delay_card"):
+                    out["_delay_token"] = result["_delay_token"]
+                    out["_delay_card"] = result["_delay_card"]
+                # #region agent log
+                try:
+                    import time as _time
+                    from submit_bridge import workspace_root as _wr
+
+                    with (_wr() / "debug-031517.log").open("a", encoding="utf-8") as _lf:
+                        _lf.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "031517",
+                                    "runId": "post-fix",
+                                    "hypothesisId": "H3",
+                                    "location": "server.py:handle_card_payload:out",
+                                    "message": "normalized card response",
+                                    "data": {
+                                        "action_name": action_name,
+                                        "out_keys": sorted(out.keys()),
+                                        "has_card": bool(out.get("card")),
+                                        "has_delay": bool(out.get("_delay_token")),
+                                        "toast_type": (out.get("toast") or {}).get("type"),
+                                    },
+                                    "timestamp": int(_time.time() * 1000),
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # #endregion
                 return out or {"toast": {"type": "info", "content": "已处理"}}
             # dispatch 直接返回 toast 结构 {type, content}
             if "type" in result and "content" in result:
+                # #region agent log
+                try:
+                    import time as _time
+                    from submit_bridge import workspace_root as _wr
+
+                    with (_wr() / "debug-031517.log").open("a", encoding="utf-8") as _lf:
+                        _lf.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "031517",
+                                    "runId": "pre-fix",
+                                    "hypothesisId": "H5",
+                                    "location": "server.py:handle_card_payload:toast_only",
+                                    "message": "dispatch returned toast-only shape",
+                                    "data": {
+                                        "action_name": action_name,
+                                        "toast_type": result.get("type"),
+                                        "toast_content": str(result.get("content") or "")[:80],
+                                    },
+                                    "timestamp": int(_time.time() * 1000),
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # #endregion
                 return {"toast": result}
             return {"toast": {"type": "info", "content": "已处理"}}
         except Exception as e:
@@ -476,6 +549,97 @@ class BotApp:
         if card:
             out["card"] = {"type": "raw", "data": card}
         return out
+
+    def _toast_with_delayed_card(
+        self,
+        toast: Dict[str, Any],
+        *,
+        card: Dict[str, Any],
+        update_token: str = "",
+    ) -> Dict[str, Any]:
+        """
+        表单提交：同步只回 toast；有 update_token 时在 HTTP 响应后再延时更新卡片。
+        无 token 时回退为同步替换卡片。
+        """
+        out: Dict[str, Any] = {"toast": toast}
+        token = str(update_token or "").strip()
+        if token:
+            out["_delay_token"] = token
+            out["_delay_card"] = card
+        else:
+            out["card"] = {"type": "raw", "data": card}
+        return out
+
+    def _schedule_delayed_card_update(
+        self, update_token: str, card: Dict[str, Any]
+    ) -> None:
+        token = str(update_token or "").strip()
+        if not token or not card:
+            return
+
+        def _run() -> None:
+            # 飞书要求：延时更新必须在回调 HTTP 响应完成之后
+            time.sleep(0.35)
+            try:
+                result = self.feishu.delay_update_card(token, card)
+                # #region agent log
+                try:
+                    from submit_bridge import workspace_root as _wr
+
+                    with (_wr() / "debug-031517.log").open("a", encoding="utf-8") as _lf:
+                        _lf.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "031517",
+                                    "runId": "post-fix",
+                                    "hypothesisId": "H6",
+                                    "location": "server.py:_schedule_delayed_card_update",
+                                    "message": "delayed card update result",
+                                    "data": {
+                                        "ok": (result or {}).get("code") == 0,
+                                        "code": (result or {}).get("code"),
+                                        "msg": str((result or {}).get("msg") or "")[:80],
+                                        "card_title": (
+                                            ((card.get("header") or {}).get("title") or {})
+                                            .get("content")
+                                        ),
+                                    },
+                                    "timestamp": int(time.time() * 1000),
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # #endregion
+            except Exception as e:
+                # #region agent log
+                try:
+                    from submit_bridge import workspace_root as _wr
+
+                    with (_wr() / "debug-031517.log").open("a", encoding="utf-8") as _lf:
+                        _lf.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "031517",
+                                    "runId": "post-fix",
+                                    "hypothesisId": "H6",
+                                    "location": "server.py:_schedule_delayed_card_update:err",
+                                    "message": "delayed card update failed",
+                                    "data": {"error": str(e)[:160]},
+                                    "timestamp": int(time.time() * 1000),
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # #endregion
+                traceback.print_exc()
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def _disabled_card_for_op(
         self,
@@ -505,6 +669,7 @@ class BotApp:
         path: str = "",
         form_value: Optional[Dict[str, Any]] = None,
         operation_id: str = "",
+        update_token: str = "",
     ) -> Dict[str, Any]:
         """
         卡片回调路径：本地状态可同步改，飞书发消息一律后台执行，
@@ -565,20 +730,48 @@ class BotApp:
             if not bug_ids:
                 return {"type": "error", "content": "请至少选择一个 Bug"}
             self._run_bg(self._prepare_close_preview, open_id, bug_ids)
-            return {"type": "info", "content": "请确认关闭预览"}
+            return self._toast_with_delayed_card(
+                {"type": "info", "content": "请确认关闭预览"},
+                card=disabled_confirm_card(
+                    title="关闭 Bug",
+                    summary_md=f"已选择 **{len(bug_ids)}** 条缺陷，请查看后续确认卡片。",
+                    status_label="已提交",
+                    template="grey",
+                ),
+                update_token=update_token,
+            )
 
         if action_name == "confirm_close":
-            return self._accept_confirm_close(open_id, operation_id)
+            return self._accept_confirm_close(
+                open_id, operation_id, update_token=update_token
+            )
 
         if action_name == "close_bug_cancel":
-            return self._accept_cancel_close(open_id, operation_id)
+            return self._accept_cancel_close(
+                open_id, operation_id, update_token=update_token
+            )
 
         if action_name == "submit_bug_form":
             draft = draft_from_form_value(form_value)
             if not draft.get("title") or not draft.get("module") or not draft.get("description"):
                 return {"type": "error", "content": "请填写必填项：标题、模块、描述"}
             self._run_bg(self._do_submit_draft, open_id, draft, [])
-            return {"type": "info", "content": "正在提交到 TAPD…"}
+            title = str(draft.get("title") or "").strip() or "（无标题）"
+            module = str(draft.get("module") or "").strip() or "（未指定）"
+            return self._toast_with_delayed_card(
+                {"type": "info", "content": "正在提交到 TAPD…"},
+                card=disabled_confirm_card(
+                    title="提 Bug",
+                    summary_md=(
+                        f"表单已提交，正在写入 TAPD。\n\n"
+                        f"- **标题**：{title}\n"
+                        f"- **模块**：{module}"
+                    ),
+                    status_label="处理中",
+                    template="blue",
+                ),
+                update_token=update_token,
+            )
 
         if action_name == "config_view":
             session = self.sessions.get(open_id)
@@ -612,7 +805,29 @@ class BotApp:
 
         if action_name == "config_form_submit":
             self._run_bg(self._prepare_config_form_preview, open_id, dict(form_value))
-            return {"type": "info", "content": "请确认配置变更"}
+            return self._toast_with_delayed_card(
+                {"type": "info", "content": "请确认配置变更"},
+                card=disabled_confirm_card(
+                    title="修改项目配置",
+                    summary_md="表单已提交，请查看后续确认卡片。",
+                    status_label="已提交",
+                    template="grey",
+                ),
+                update_token=update_token,
+            )
+
+        if action_name == "config_form_cancel":
+            self._run_bg(self._send_config_view, open_id)
+            return self._toast_with_delayed_card(
+                {"type": "info", "content": "已取消"},
+                card=disabled_confirm_card(
+                    title="修改项目配置",
+                    summary_md="已取消修改，未保存。",
+                    status_label="已取消",
+                    template="grey",
+                ),
+                update_token=update_token,
+            )
 
         if action_name == "confirm_config":
             return self._accept_confirm_config(open_id, operation_id)
@@ -634,13 +849,39 @@ class BotApp:
 
         if action_name == "account_form_submit":
             self._run_bg(self._apply_account_config_form, open_id, dict(form_value))
-            return {"type": "success", "content": "正在保存账号配置…"}
+            return self._toast_with_delayed_card(
+                {"type": "success", "content": "正在保存账号配置…"},
+                card=disabled_confirm_card(
+                    title="修改账号配置",
+                    summary_md="账号配置表单已提交。",
+                    status_label="处理中",
+                    template="blue",
+                ),
+                update_token=update_token,
+            )
+
+        if action_name == "account_form_cancel":
+            self._run_bg(self._send_account_view, open_id)
+            return self._toast_with_delayed_card(
+                {"type": "info", "content": "已取消"},
+                card=disabled_confirm_card(
+                    title="修改账号配置",
+                    summary_md="已取消修改，未保存。",
+                    status_label="已取消",
+                    template="grey",
+                ),
+                update_token=update_token,
+            )
 
         if action_name == "cancel_draft":
-            return self._accept_cancel_draft(open_id, operation_id)
+            return self._accept_cancel_draft(
+                open_id, operation_id, update_token=update_token
+            )
 
         if action_name == "confirm_submit":
-            return self._accept_confirm_submit(open_id, operation_id)
+            return self._accept_confirm_submit(
+                open_id, operation_id, update_token=update_token
+            )
 
         if action_name == "module_frontend":
             self._run_bg(self._set_module, open_id, "前端")
@@ -652,12 +893,14 @@ class BotApp:
 
         return {"type": "error", "content": f"未知操作：{action_name}"}
 
-    def _accept_confirm_close(self, open_id: str, operation_id: str) -> Dict[str, Any]:
+    def _accept_confirm_close(
+        self, open_id: str, operation_id: str, *, update_token: str = ""
+    ) -> Dict[str, Any]:
         session = self.sessions.get(open_id)
         op = session.get_operation(operation_id) if operation_id else session.pending_operation
         if op and op.kind == "close_bug":
             if op.status == "processing":
-                return self._card_response(
+                return self._toast_with_delayed_card(
                     {"type": "info", "content": "操作已受理"},
                     card=self._disabled_card_for_op(
                         kind="close_bug",
@@ -665,15 +908,17 @@ class BotApp:
                         status_label="处理中",
                         template="blue",
                     ),
+                    update_token=update_token,
                 )
             if op.status in ("completed", "cancelled", "failed"):
-                return self._card_response(
+                return self._toast_with_delayed_card(
                     {"type": "info", "content": "操作已结束"},
                     card=self._disabled_card_for_op(
                         kind="close_bug",
                         summary=op.card_summary,
                         status_label="已结束",
                     ),
+                    update_token=update_token,
                 )
             if op.status == "pending":
                 if operation_id and op.operation_id != operation_id:
@@ -683,7 +928,7 @@ class BotApp:
                     return {"type": "error", "content": "没有待关闭的 Bug，请重新选择"}
                 session.mark_operation(op.operation_id, "processing")
                 self._run_bg(self._run_close_bugs, open_id, ids, op.operation_id)
-                return self._card_response(
+                return self._toast_with_delayed_card(
                     {"type": "info", "content": f"正在关闭 {len(ids)} 条 Bug…"},
                     card=self._disabled_card_for_op(
                         kind="close_bug",
@@ -691,6 +936,7 @@ class BotApp:
                         status_label="处理中…",
                         template="blue",
                     ),
+                    update_token=update_token,
                 )
 
         # 兼容旧卡（无 operation_id）
@@ -700,7 +946,9 @@ class BotApp:
         self._run_bg(self._run_close_bugs, open_id, ids, "")
         return {"type": "info", "content": f"正在关闭 {len(ids)} 条 Bug…"}
 
-    def _accept_cancel_close(self, open_id: str, operation_id: str) -> Dict[str, Any]:
+    def _accept_cancel_close(
+        self, open_id: str, operation_id: str, *, update_token: str = ""
+    ) -> Dict[str, Any]:
         session = self.sessions.get(open_id)
         op = session.get_operation(operation_id) if operation_id else session.pending_operation
         summary = op.card_summary if op else "关闭操作已取消。"
@@ -708,13 +956,14 @@ class BotApp:
             session.mark_operation(op.operation_id, "cancelled", clear_payload=True)
         session.clear_pending_ops()
         self._run_bg(self.reply_text, open_id, "已取消关闭操作。")
-        return self._card_response(
+        return self._toast_with_delayed_card(
             {"type": "info", "content": "已取消"},
             card=self._disabled_card_for_op(
                 kind="close_bug",
                 summary=summary,
                 status_label="已取消",
             ),
+            update_token=update_token,
         )
 
     def _accept_confirm_config(self, open_id: str, operation_id: str) -> Dict[str, Any]:
@@ -761,12 +1010,14 @@ class BotApp:
         self._run_bg(self._commit_config_changes, open_id, changes, "")
         return {"type": "success", "content": "正在保存配置…"}
 
-    def _accept_confirm_submit(self, open_id: str, operation_id: str) -> Dict[str, Any]:
+    def _accept_confirm_submit(
+        self, open_id: str, operation_id: str, *, update_token: str = ""
+    ) -> Dict[str, Any]:
         session = self.sessions.get(open_id)
         op = session.get_operation(operation_id) if operation_id else None
         if op and op.kind == "submit_bug":
             if op.status == "processing":
-                return self._card_response(
+                return self._toast_with_delayed_card(
                     {"type": "info", "content": "操作已受理"},
                     card=self._disabled_card_for_op(
                         kind="submit_bug",
@@ -774,19 +1025,21 @@ class BotApp:
                         status_label="处理中",
                         template="blue",
                     ),
+                    update_token=update_token,
                 )
             if op.status != "pending":
-                return self._card_response(
+                return self._toast_with_delayed_card(
                     {"type": "info", "content": "操作已结束"},
                     card=self._disabled_card_for_op(
                         kind="submit_bug",
                         summary=op.card_summary,
                         status_label="已结束",
                     ),
+                    update_token=update_token,
                 )
             session.mark_operation(op.operation_id, "processing")
             self._run_bg(self._do_submit, open_id, session, op.operation_id)
-            return self._card_response(
+            return self._toast_with_delayed_card(
                 {"type": "info", "content": "正在提交…"},
                 card=self._disabled_card_for_op(
                     kind="submit_bug",
@@ -794,11 +1047,14 @@ class BotApp:
                     status_label="处理中…",
                     template="blue",
                 ),
+                update_token=update_token,
             )
         self._run_bg(self._do_submit, open_id, session, "")
         return {"type": "info", "content": "正在提交…"}
 
-    def _accept_cancel_draft(self, open_id: str, operation_id: str) -> Dict[str, Any]:
+    def _accept_cancel_draft(
+        self, open_id: str, operation_id: str, *, update_token: str = ""
+    ) -> Dict[str, Any]:
         session = self.sessions.get(open_id)
         op = session.get_operation(operation_id) if operation_id else session.pending_operation
         summary = op.card_summary if op and op.kind == "submit_bug" else "草稿已取消。"
@@ -806,13 +1062,14 @@ class BotApp:
             session.mark_operation(op.operation_id, "cancelled", clear_payload=True)
         self.sessions.reset(open_id)
         self._run_bg(self.reply_text, open_id, "已取消，当前草稿已清空。")
-        return self._card_response(
+        return self._toast_with_delayed_card(
             {"type": "info", "content": "草稿已清空"},
             card=self._disabled_card_for_op(
                 kind="submit_bug",
                 summary=summary,
                 status_label="已取消",
             ),
+            update_token=update_token,
         )
 
     def _send_config_view(self, open_id: str) -> None:
@@ -2104,7 +2361,80 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+            # #region agent log
+            try:
+                import time as _t
+                _card = obj.get("card") if isinstance(obj, dict) else None
+                with open(
+                    str(Path(__file__).resolve().parent.parent.parent / "debug-031517.log"),
+                    "a",
+                    encoding="utf-8",
+                ) as _lf:
+                    _lf.write(
+                        json.dumps(
+                            {
+                                "sessionId": "031517",
+                                "runId": "pre-fix",
+                                "hypothesisId": "H4",
+                                "location": "server.py:Handler._write_json:ok",
+                                "message": "response written",
+                                "data": {
+                                    "http_code": code,
+                                    "bytes": len(data),
+                                    "has_card": bool(
+                                        isinstance(obj, dict) and obj.get("card")
+                                    ),
+                                    "has_toast": bool(
+                                        isinstance(obj, dict) and obj.get("toast")
+                                    ),
+                                    "card_type": (
+                                        _card.get("type")
+                                        if isinstance(_card, dict)
+                                        else None
+                                    ),
+                                },
+                                "timestamp": int(_t.time() * 1000),
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+            # #endregion
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
+            # #region agent log
+            try:
+                import time as _t
+                with open(
+                    str(Path(__file__).resolve().parent.parent.parent / "debug-031517.log"),
+                    "a",
+                    encoding="utf-8",
+                ) as _lf:
+                    _lf.write(
+                        json.dumps(
+                            {
+                                "sessionId": "031517",
+                                "runId": "pre-fix",
+                                "hypothesisId": "H4",
+                                "location": "server.py:Handler._write_json:fail",
+                                "message": "response write failed",
+                                "data": {
+                                    "http_code": code,
+                                    "bytes": len(data),
+                                    "has_card": bool(
+                                        isinstance(obj, dict) and obj.get("card")
+                                    ),
+                                },
+                                "timestamp": int(_t.time() * 1000),
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+            # #endregion
             # 飞书/隧道已超时断开：业务多半已处理完，忽略回写失败
             pass
 
@@ -2123,18 +2453,229 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_json()
             payload = _APP.unwrap_event(body)
 
+            # #region agent log
+            try:
+                import time as _t
+                _hdr = payload.get("header") if isinstance(payload.get("header"), dict) else {}
+                with open(
+                    str(Path(__file__).resolve().parent.parent.parent / "debug-031517.log"),
+                    "a",
+                    encoding="utf-8",
+                ) as _lf:
+                    _lf.write(
+                        json.dumps(
+                            {
+                                "sessionId": "031517",
+                                "runId": "pre-fix",
+                                "hypothesisId": "H1",
+                                "location": "server.py:Handler.do_POST",
+                                "message": "incoming POST",
+                                "data": {
+                                    "http_path": path,
+                                    "event_type": str(
+                                        _hdr.get("event_type")
+                                        or payload.get("type")
+                                        or ""
+                                    ),
+                                    "payload_keys": sorted(payload.keys())[:20],
+                                    "has_action": bool(
+                                        payload.get("action")
+                                        or (
+                                            payload.get("event")
+                                            if isinstance(payload.get("event"), dict)
+                                            else {}
+                                        ).get("action")
+                                    ),
+                                },
+                                "timestamp": int(_t.time() * 1000),
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+            # #endregion
+
             if path in ("/feishu/card", "/card"):
                 result = _APP.handle_card_payload(payload)
+                # #region agent log
+                try:
+                    import time as _t
+                    _card = result.get("card") if isinstance(result, dict) else None
+                    with open(
+                        str(Path(__file__).resolve().parent.parent.parent / "debug-031517.log"),
+                        "a",
+                        encoding="utf-8",
+                    ) as _lf:
+                        _lf.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "031517",
+                                    "runId": "pre-fix",
+                                    "hypothesisId": "H3",
+                                    "location": "server.py:Handler.do_POST:card",
+                                    "message": "card callback response about to write",
+                                    "data": {
+                                        "result_keys": sorted(result.keys())
+                                        if isinstance(result, dict)
+                                        else [],
+                                        "has_toast": bool(
+                                            isinstance(result, dict) and result.get("toast")
+                                        ),
+                                        "has_card": bool(
+                                            isinstance(result, dict) and result.get("card")
+                                        ),
+                                        "card_type": (
+                                            _card.get("type")
+                                            if isinstance(_card, dict)
+                                            else None
+                                        ),
+                                        "card_data_schema": (
+                                            (_card.get("data") or {}).get("schema")
+                                            if isinstance(_card, dict)
+                                            else None
+                                        ),
+                                        "card_title": (
+                                            (
+                                                ((_card.get("data") or {}).get("header") or {})
+                                                .get("title")
+                                                or {}
+                                            ).get("content")
+                                            if isinstance(_card, dict)
+                                            else None
+                                        ),
+                                    },
+                                    "timestamp": int(_t.time() * 1000),
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # #endregion
+                delay_token = ""
+                delay_card: Optional[Dict[str, Any]] = None
+                if isinstance(result, dict):
+                    delay_token = str(result.pop("_delay_token", "") or "")
+                    delay_card = result.pop("_delay_card", None)
+                # #region agent log
+                try:
+                    import time as _t
+                    with open(
+                        str(Path(__file__).resolve().parent.parent.parent / "debug-031517.log"),
+                        "a",
+                        encoding="utf-8",
+                    ) as _lf:
+                        _lf.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "031517",
+                                    "runId": "post-fix",
+                                    "hypothesisId": "H6",
+                                    "location": "server.py:Handler.do_POST:card:before_write",
+                                    "message": "writing card callback response",
+                                    "data": {
+                                        "has_delay": bool(delay_token and delay_card),
+                                        "has_sync_card": bool(
+                                            isinstance(result, dict) and result.get("card")
+                                        ),
+                                        "response_keys": sorted(result.keys())
+                                        if isinstance(result, dict)
+                                        else [],
+                                    },
+                                    "timestamp": int(_t.time() * 1000),
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # #endregion
                 self._write_json(200, result)
+                if delay_token and isinstance(delay_card, dict):
+                    _APP._schedule_delayed_card_update(delay_token, delay_card)
                 return
 
             if path in ("/feishu/event", "/event", "/"):
                 result = _APP.handle_event_payload(payload)
+                delay_token = ""
+                delay_card = None
+                if isinstance(result, dict):
+                    delay_token = str(result.pop("_delay_token", "") or "")
+                    delay_card = result.pop("_delay_card", None)
+                # #region agent log
+                try:
+                    import time as _t
+                    with open(
+                        str(Path(__file__).resolve().parent.parent.parent / "debug-031517.log"),
+                        "a",
+                        encoding="utf-8",
+                    ) as _lf:
+                        _lf.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "031517",
+                                    "runId": "post-fix",
+                                    "hypothesisId": "H1",
+                                    "location": "server.py:Handler.do_POST:event",
+                                    "message": "event path response",
+                                    "data": {
+                                        "result_keys": sorted(result.keys())
+                                        if isinstance(result, dict)
+                                        else [],
+                                        "has_card": bool(
+                                            isinstance(result, dict) and result.get("card")
+                                        ),
+                                        "has_toast": bool(
+                                            isinstance(result, dict) and result.get("toast")
+                                        ),
+                                        "has_delay": bool(delay_token and delay_card),
+                                    },
+                                    "timestamp": int(_t.time() * 1000),
+                                },
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+                # #endregion
                 self._write_json(200, result)
+                if delay_token and isinstance(delay_card, dict):
+                    _APP._schedule_delayed_card_update(delay_token, delay_card)
                 return
 
             self._write_json(404, {"error": "not found"})
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # #region agent log
+            try:
+                import time as _t
+                with open(
+                    str(Path(__file__).resolve().parent.parent.parent / "debug-031517.log"),
+                    "a",
+                    encoding="utf-8",
+                ) as _lf:
+                    _lf.write(
+                        json.dumps(
+                            {
+                                "sessionId": "031517",
+                                "runId": "post-fix",
+                                "hypothesisId": "H4",
+                                "location": "server.py:Handler.do_POST:broken_pipe",
+                                "message": "client disconnected before response",
+                                "data": {"http_path": path},
+                                "timestamp": int(_t.time() * 1000),
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+            # #endregion
             # 客户端已断开，勿再尝试写 500
             return
         except Exception as e:

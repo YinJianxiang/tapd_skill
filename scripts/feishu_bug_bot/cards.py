@@ -379,7 +379,7 @@ def config_form_card(rows: List[Tuple[str, str, Any]]) -> Dict[str, Any]:
                     "name": "project_config_form",
                     "elements": elements,
                 },
-                _v2_callback_btn("btn_cancel_project_config", "取消", "config_view"),
+                _v2_callback_btn("btn_cancel_project_config", "取消", "config_form_cancel"),
             ]
         },
     }
@@ -451,7 +451,7 @@ def account_form_card(
                     "name": "account_config_form",
                     "elements": elements,
                 },
-                _v2_callback_btn("btn_cancel_account_config", "取消", "account_view"),
+                _v2_callback_btn("btn_cancel_account_config", "取消", "account_form_cancel"),
             ]
         },
     }

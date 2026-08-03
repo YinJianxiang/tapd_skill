@@ -347,28 +347,99 @@ def extract_description_keywords(description: str, limit: int = 160) -> str:
     return re.sub(r"\s+", " ", text).strip()[:limit]
 
 
-def build_query_variants(bug: Dict[str, Any], extra_query: str = "") -> List[str]:
+def extract_product_name(bug_title: str = "", explicit: str = "") -> str:
+    """优先取标题【】前缀，其次显式 product_name / defaults.name。"""
+    raw = strip_html(bug_title)
+    bracket = re.search(r"【([^】]+)】", raw)
+    if bracket:
+        return bracket.group(1).strip()
+    return str(explicit or "").strip()
+
+
+def product_name_affinity(product_name: str, story_name: str) -> float:
+    """
+    用配置/标题中的 name 做需求匹配亲和度（部分匹配，不必全名一致）。
+    例如 name=河马素材体系建设1.0 可命中 智投-需求河马素材标签体系建设1.0。
+    """
+    p = normalize_text(product_name)
+    s = normalize_text(story_name)
+    if not p or not s:
+        return 0.0
+    if p == s or p in s or s in p:
+        return 0.85
+
+    p_core = re.sub(r"[\d\s.]+$", "", p).strip()
+    s_core = re.sub(r"[\d\s.]+$", "", s).strip()
+    if p_core and (p_core in s_core or s_core in p_core):
+        return 0.85
+
+    s_stripped = re.sub(r"^(智投|需求|海外|国内智投)\s*", "", s_core).strip()
+    if p_core and s_stripped and (p_core in s_stripped or s_stripped in p_core):
+        return 0.85
+
+    p_chars = [c for c in (p_core or p) if "\u4e00" <= c <= "\u9fff"]
+    s_chars = set(c for c in (s_core or s) if "\u4e00" <= c <= "\u9fff")
+    if not p_chars:
+        return 0.0
+    coverage = sum(1 for c in p_chars if c in s_chars) / len(p_chars)
+    if coverage >= 0.8:
+        return 0.85
+    if coverage >= 0.65:
+        return 0.55
+    return 0.0
+
+
+def build_query_variants(
+    bug: Dict[str, Any],
+    extra_query: str = "",
+    product_name: str = "",
+) -> List[str]:
     title = str(bug.get("title", "")).strip()
     body = re.sub(r"^【[^】]*】", "", title).strip()
     desc = extract_description_keywords(str(bug.get("description", "")))
     extra = str(extra_query or "").strip()
+    product = extract_product_name(title, product_name)
     variants: List[str] = []
-    for item in (body, title, desc, f"{body} {desc}".strip(), extra):
+    for item in (
+        product,
+        body,
+        title,
+        desc,
+        f"{product} {body}".strip(),
+        f"{body} {desc}".strip(),
+        extra,
+    ):
         norm = normalize_text(item)
         if norm and norm not in {normalize_text(v) for v in variants}:
             variants.append(item)
     return variants
 
 
-def build_query_from_bug(bug: Dict[str, Any], extra_query: str = "") -> str:
-    variants = build_query_variants(bug, extra_query)
+def build_query_from_bug(
+    bug: Dict[str, Any],
+    extra_query: str = "",
+    product_name: str = "",
+) -> str:
+    variants = build_query_variants(bug, extra_query, product_name=product_name)
     return variants[0] if variants else ""
 
 
-def score_story(query_variants: List[str], story_name: str, bug_title: str = "") -> float:
-    if not query_variants:
+def score_story(
+    query_variants: List[str],
+    story_name: str,
+    bug_title: str = "",
+    product_name: str = "",
+) -> float:
+    if not query_variants and not product_name and not bug_title:
         return 0.0
-    base = max(score_pair(q, story_name) for q in query_variants)
+    base = (
+        max(score_pair(q, story_name) for q in query_variants) if query_variants else 0.0
+    )
+    product = extract_product_name(bug_title, product_name)
+    if product:
+        base = max(base, product_name_affinity(product, story_name))
+        base = max(base, score_pair(product, story_name))
+
     name_norm = normalize_text(story_name)
     raw_title = strip_html(bug_title)
     bracket = re.search(r"【([^】]+)】", raw_title)
@@ -386,13 +457,24 @@ def rank_stories(
     workspace_id: str,
     bug_title: str = "",
     top_n: int = 5,
+    product_name: str = "",
 ) -> List[Dict[str, Any]]:
     scored: List[Tuple[float, Dict[str, Any]]] = []
     for story in stories:
         name = str(story.get("name", "")).strip()
         if not name:
             continue
-        scored.append((score_story(query_variants, name, bug_title), story))
+        scored.append(
+            (
+                score_story(
+                    query_variants,
+                    name,
+                    bug_title,
+                    product_name=product_name,
+                ),
+                story,
+            )
+        )
     scored.sort(key=lambda x: x[0], reverse=True)
     results: List[Dict[str, Any]] = []
     for idx, (score, story) in enumerate(scored[:top_n]):
@@ -481,6 +563,11 @@ def load_payload(args: argparse.Namespace, config: Dict[str, Any]) -> Dict[str, 
         if picked is not None:
             payload["iteration"] = str(picked).strip()
 
+    if not str(payload.get("product_name", "")).strip():
+        picked_name = pick_value(payload, config, "name")
+        if picked_name is not None and str(picked_name).strip():
+            payload["product_name"] = str(picked_name).strip()
+
     link_cfg = config.get("link_story", {})
     if isinstance(link_cfg, dict):
         for key in ("match_scope", "fallback_project"):
@@ -547,11 +634,17 @@ def resolve_story(
         listing = "; ".join(f'{s.get("id")}={s.get("name")}' for s in fuzzy[:8])
         raise ValueError(f"需求名称「{name}」匹配到多个，请改用 story_id。候选：{listing}")
 
+    product_name = str(payload.get("product_name") or "").strip()
     query_variants = (
         [str(payload.get("query", "")).strip()]
         if str(payload.get("query", "")).strip()
-        else build_query_variants(bug)
+        else build_query_variants(bug, product_name=product_name)
     )
+    if product_name:
+        # 确保 name 参与匹配（即使用户传了 query）
+        pn_norm = normalize_text(product_name)
+        if pn_norm and pn_norm not in {normalize_text(v) for v in query_variants}:
+            query_variants = [product_name] + query_variants
     query = query_variants[0] if query_variants else ""
 
     scope = str(payload.get("match_scope") or "iteration").strip()
@@ -581,7 +674,9 @@ def resolve_story(
 
     bug_title = str(bug.get("title", "")).strip()
 
-    candidates = rank_stories(query_variants, stories, workspace_id, bug_title, top_n=5)
+    candidates = rank_stories(
+        query_variants, stories, workspace_id, bug_title, top_n=5, product_name=product_name
+    )
     best_score = candidates[0]["score"] if candidates else 0.0
     if (
         scope != "project"
@@ -590,7 +685,12 @@ def resolve_story(
         and best_score < MEDIUM_SCORE
     ):
         project_candidates = rank_stories(
-            query_variants, project_stories, workspace_id, bug_title, top_n=5
+            query_variants,
+            project_stories,
+            workspace_id,
+            bug_title,
+            top_n=5,
+            product_name=product_name,
         )
         if project_candidates and project_candidates[0]["score"] > best_score:
             stories = project_stories
@@ -735,6 +835,16 @@ def build_link_payload_from_config(
         "match_scope": link_cfg.get("match_scope", "iteration"),
         "fallback_project": link_cfg.get("fallback_project", True),
     }
+
+    # defaults.name / payload.name → 用于需求部分匹配（不必全名一致）
+    defaults = config.get("defaults", {}) if isinstance(config.get("defaults"), dict) else {}
+    product_name = (
+        str(submit_payload.get("name") or "").strip()
+        or str(defaults.get("name") or "").strip()
+        or str(submit_payload.get("product_name") or "").strip()
+    )
+    if product_name:
+        out["product_name"] = product_name
 
     story_from_config = False
     for key in ("story_id", "story_name", "story_url"):
