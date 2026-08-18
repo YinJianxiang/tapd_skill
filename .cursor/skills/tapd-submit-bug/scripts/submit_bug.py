@@ -459,6 +459,143 @@ def resolve_iteration_in_payload(
     return payload
 
 
+def normalize_person_query(raw: str) -> str:
+    """
+    规范化人名查询串。
+    支持页面悬停文案「昵称(中文名)」如：马超_20240222105137(马超01)。
+    """
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    # 去掉尾部分号（TAPD 多人字段常见「张三;」）
+    text = text.rstrip(";；,，").strip()
+    m = re.fullmatch(r"(.+?)\(([^()]*)\)\s*", text)
+    if m:
+        nick, display = m.group(1).strip(), m.group(2).strip()
+        # 优先保留括号内中文名（与 module_owner_map 常用写法一致）
+        return display or nick
+    return text
+
+
+def fetch_workspace_users(client: Any, workspace_id: str) -> List[Dict[str, str]]:
+    """拉取项目成员；返回 [{user, name}, ...]。"""
+    resp = client.request(
+        "GET",
+        "workspaces/users",
+        params={
+            "workspace_id": workspace_id,
+            "fields": "user,name,email",
+        },
+    )
+    rows = resp.get("data", [])
+    if not isinstance(rows, list):
+        return []
+    users: List[Dict[str, str]] = []
+    for row in rows:
+        item = row.get("UserWorkspace", row) if isinstance(row, dict) else {}
+        if not isinstance(item, dict):
+            continue
+        nick = str(item.get("user", "")).strip()
+        if not nick:
+            continue
+        users.append(
+            {
+                "user": nick,
+                "name": str(item.get("name", "") or "").strip(),
+                "email": str(item.get("email", "") or "").strip(),
+            }
+        )
+    return users
+
+
+def resolve_workspace_user_nick(
+    query: str,
+    users: List[Dict[str, str]],
+    *,
+    field_label: str = "人员",
+) -> str:
+    """
+    将配置/payload 中的人名解析为 TAPD 成员昵称（user）。
+
+    匹配优先级：
+    1) user 精确
+    2) name（中文名/展示名，如马超01）精确
+    3) 唯一模糊：user 或 name 包含查询串
+    """
+    q = normalize_person_query(query)
+    if not q:
+        return ""
+    if not users:
+        raise ValueError(f"无法解析{field_label}「{query}」：项目成员列表为空")
+
+    exact_user = [u for u in users if u.get("user") == q]
+    if len(exact_user) == 1:
+        return exact_user[0]["user"]
+    if len(exact_user) > 1:
+        listing = "; ".join(f'{u["user"]}({u.get("name") or "-"})' for u in exact_user[:8])
+        raise ValueError(f"{field_label}「{query}」命中多个昵称：{listing}")
+
+    exact_name = [u for u in users if u.get("name") == q]
+    if len(exact_name) == 1:
+        return exact_name[0]["user"]
+    if len(exact_name) > 1:
+        listing = "; ".join(f'{u["user"]}({u.get("name") or "-"})' for u in exact_name[:8])
+        raise ValueError(
+            f"{field_label}「{query}」对应多个同名成员，请改用完整昵称：{listing}"
+        )
+
+    fuzzy = [
+        u
+        for u in users
+        if q in str(u.get("user", "")) or (u.get("name") and q in str(u.get("name")))
+    ]
+    if len(fuzzy) == 1:
+        return fuzzy[0]["user"]
+    if not fuzzy:
+        raise ValueError(
+            f"未找到{field_label}「{query}」。可用成员中文名（name）或完整昵称（user），"
+            f"例如马超01 → 马超_20240222105137"
+        )
+    listing = "; ".join(f'{u["user"]}({u.get("name") or "-"})' for u in fuzzy[:8])
+    raise ValueError(
+        f"{field_label}「{query}」模糊命中多人，请改用精确中文名或完整昵称：{listing}"
+    )
+
+
+def resolve_people_nicks_in_payload(
+    payload: Dict[str, Any], client: Any
+) -> Dict[str, Any]:
+    """
+    提交前将 current_owner / reporter / te / de 解析为 TAPD user 昵称。
+    module_owner_map 可写中文名（如马超01），API 写入时用对应 user。
+    """
+    workspace_id = str(payload.get("workspace_id", "")).strip()
+    if not workspace_id:
+        return payload
+
+    fields = ("current_owner", "reporter", "te", "de")
+    need_resolve = any(str(payload.get(f, "")).strip() for f in fields)
+    if not need_resolve:
+        return payload
+
+    users = fetch_workspace_users(client, workspace_id)
+    resolved_meta: Dict[str, Any] = {}
+    for field in fields:
+        raw = str(payload.get(field, "")).strip()
+        if not raw:
+            continue
+        # 多人字段：取第一个有效人名（缺陷处理人通常单人）
+        first = raw.split(";")[0].split("；")[0].strip()
+        nick = resolve_workspace_user_nick(first, users, field_label=field)
+        if nick != first:
+            resolved_meta[field] = {"from": first, "to": nick}
+        payload[field] = nick
+
+    if resolved_meta:
+        payload["_resolved_people"] = resolved_meta
+    return payload
+
+
 def finalize_tapd_bug_payload(payload: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     将内部字段映射为 TAPD bugs API 字段，并按项目约定自动补齐侧栏信息。
@@ -757,6 +894,7 @@ def main() -> None:
     payload = load_payload(args, config)
     client = load_tapd_client()
     payload = resolve_iteration_in_payload(payload, config, client)
+    payload = resolve_people_nicks_in_payload(payload, client)
 
     image_paths, attachment_paths = collect_input_files(args, payload, config)
     embed_result = embed_images_in_description(
@@ -779,11 +917,13 @@ def main() -> None:
             if isinstance(defaults, dict) and str(defaults.get("iteration", "")).strip()
             else None
         )
+        resolved_people = payload.pop("_resolved_people", None)
         print(
             json.dumps(
                 {
                     "dry_run": True,
                     "payload": payload,
+                    "resolved_people": resolved_people,
                     "iteration_name": iteration_name,
                     "config_file": str((Path(args.config_file).resolve() if args.config_file else DEFAULT_CONFIG_FILE)),
                     "image_paths": image_paths,
@@ -804,6 +944,10 @@ def main() -> None:
             )
         )
         return
+
+    # 内部元数据勿提交给 TAPD
+    payload.pop("_resolved_people", None)
+    payload.pop("_embed_images_cfg", None)
 
     record = state.get("records", {}).get(idempotency_key, {})
     if not isinstance(record, dict):

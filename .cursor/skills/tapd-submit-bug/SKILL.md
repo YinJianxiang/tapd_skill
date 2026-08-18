@@ -189,7 +189,7 @@ python ".cursor/skills/tapd-config-init/scripts/init_tapd_config.py"
    - `defaults.reporter` / `defaults.version`（发现版本）/ `defaults.iteration`（迭代名称）
    - `defaults.name`：标题前缀名称，提交时格式化为 `【name】xxx`（如 `全域投放`）
    - **勿配置 `defaults.module`**：`module` 须用户确认或 AI 高置信写入 payload，脚本不会读取该默认项
-   - `module_owner_map`（模块 -> 开发负责人）
+   - `module_owner_map`（模块 -> 开发负责人；可填 TAPD **中文名**如 `马超01`，或完整昵称 `马超_20240222105137`；提交前会解析为 API 所需昵称 `user`）
    - 可选 `module_field_map`（模块级自定义字段）
 
 示例：
@@ -206,12 +206,14 @@ python ".cursor/skills/tapd-config-init/scripts/init_tapd_config.py"
   },
   "module_owner_map": {
     "前端": "李四",
-    "后端": "王五"
+    "后端": "马超01"
   }
 }
 ```
 
 `iteration` 填迭代名称（与 TAPD 页面显示一致），脚本提交前会调 API 解析为 `iteration_id`；通常与发现版本名相同。可用 `tapd_client_stdlib.py iterations --workspace-id <ID>` 核对名称。
+
+人员字段（`current_owner` / `reporter` / `te` / `de`）提交前会调用 `workspaces/users`，按 **user 精确 → name 精确 → 唯一模糊** 解析为成员昵称。页面悬停文案 `马超_xxx(马超01)` 也可直接粘贴。重名时会报错并列出候选，需改用精确中文名或完整昵称。
 
 ## 命令示例（推荐：payload 文件 + 通用脚本）
 
