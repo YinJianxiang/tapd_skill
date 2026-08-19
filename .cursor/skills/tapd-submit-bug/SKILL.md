@@ -109,12 +109,14 @@ description: >-
 |------|------|
 | 高置信度匹配 | 自动 `POST relations` 写入「关联需求」 |
 | 中/低置信度 | **不自动关联**，返回 `story_link.action=need_confirm` 与候选列表 |
-| payload 含 `story_id` / `story_name` | 直接关联指定需求 |
+| payload 含 `story_id` / `story_name` | 直接关联指定需求，并**回写**到 `project_config.json` → `link_story`（可用 `--no-persist-link-story` 关闭） |
 | `link_story.story_id` / `story_name` 已配置（非空） | 直接关联配置中的需求（优先于自动匹配） |
 | 配置与 payload 均为空 | 按缺陷标题/描述自动匹配（原逻辑） |
 | `--no-link-story` 或 `link_story.enabled=false` | 跳过 |
 
 **关联优先级**：payload/CLI `story_id`/`story_name` > `project_config.json` → `link_story.story_id`/`story_name` > 自动标题匹配。
+
+**用户指认需求后的持久化**：对话中用户明确指定关联需求（如「关联 xxx 需求」）时，提单脚本在 dry-run / 正式提交解析成功后，将 `story_id` + `story_name` 写入本地 `link_story`，后续同项目提单无需反复指定。返回字段 `link_story_persist` 可见是否已更新配置。
 
 配置示例（固定关联某需求；留空则自动匹配）：
 
@@ -474,6 +476,7 @@ python ".cursor/skills/tapd-plus/scripts/tapd_client_stdlib.py" upload-attachmen
 2. **`module` 已确认后**：执行 `--dry-run` 展示完整缺陷单草稿（含配置自动带入字段）。
 3. 用户回复「确认提交」后，再执行正式提交（去掉 `--dry-run`）。
 4. 正式提交时必须与「已确认草稿」一致，禁止切换为英文标题/英文描述，禁止擅自改 `module`。
+5. **用户指认关联需求**（如「关联 xxx」「绑到需求 yyy」）时：payload 写入 `story_id` / `story_name`；脚本会在 dry-run/提交成功解析后回写 `link_story`。草稿中展示「将自动关联 + 已写入 link_story（若有）」；勿在未指认时擅自改 `link_story`。
 
 草稿展示语言约定：
 

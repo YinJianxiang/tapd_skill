@@ -118,6 +118,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="创建 bug 后不搜索/关联需求",
     )
+    parser.add_argument(
+        "--no-persist-link-story",
+        action="store_true",
+        help="用户显式指定需求时，不回写到 project_config.json 的 link_story",
+    )
     parser.add_argument("--file", dest="file_path", help="截图/附件路径（图片默认内嵌到「实际结果」）")
     parser.add_argument(
         "--files",
@@ -153,8 +158,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_config_path(args: argparse.Namespace) -> Path:
+    return Path(args.config_file).resolve() if args.config_file else DEFAULT_CONFIG_FILE
+
+
 def load_config(args: argparse.Namespace) -> Dict[str, Any]:
-    config_path = Path(args.config_file).resolve() if args.config_file else DEFAULT_CONFIG_FILE
+    config_path = resolve_config_path(args)
     if not config_path.is_file():
         return {}
 
@@ -164,6 +173,102 @@ def load_config(args: argparse.Namespace) -> Dict[str, Any]:
     if not isinstance(config, dict):
         raise ValueError("配置文件必须是 JSON 对象")
     return config
+
+
+def save_project_config(config_path: Path, config: Dict[str, Any]) -> None:
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        json.dumps(config, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def persist_link_story_to_config(
+    config_path: Path,
+    config: Dict[str, Any],
+    *,
+    story_id: str,
+    story_name: str = "",
+) -> Optional[Dict[str, Any]]:
+    """
+    将用户显式指定的需求写入 project_config.json → link_story。
+    后续提单未再指定时，直接按配置关联该需求。
+    """
+    sid = str(story_id or "").strip()
+    sname = str(story_name or "").strip()
+    if not sid and not sname:
+        return None
+    if not config_path.is_file() and not config:
+        return None
+
+    link_cfg = config.get("link_story")
+    if not isinstance(link_cfg, dict):
+        link_cfg = {}
+        config["link_story"] = link_cfg
+
+    before = {
+        "enabled": link_cfg.get("enabled", True),
+        "story_id": str(link_cfg.get("story_id", "") or "").strip(),
+        "story_name": str(link_cfg.get("story_name", "") or "").strip(),
+    }
+    link_cfg["enabled"] = True
+    if sid:
+        link_cfg["story_id"] = sid
+    if sname:
+        link_cfg["story_name"] = sname
+    # 保留已有 match_scope / fallback_project；缺省补齐
+    if "match_scope" not in link_cfg or not str(link_cfg.get("match_scope", "")).strip():
+        link_cfg["match_scope"] = "iteration"
+    if "fallback_project" not in link_cfg:
+        link_cfg["fallback_project"] = True
+
+    after = {
+        "enabled": True,
+        "story_id": str(link_cfg.get("story_id", "") or "").strip(),
+        "story_name": str(link_cfg.get("story_name", "") or "").strip(),
+    }
+    if before == after:
+        return {"action": "unchanged", "link_story": after, "config_file": str(config_path)}
+
+    save_project_config(config_path, config)
+    return {
+        "action": "updated",
+        "from": before,
+        "to": after,
+        "config_file": str(config_path),
+    }
+
+
+def maybe_persist_explicit_link_story(
+    args: argparse.Namespace,
+    config: Dict[str, Any],
+    payload: Dict[str, Any],
+    story_link: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """payload/CLI 显式指定需求且解析成功时，回写 link_story。"""
+    if getattr(args, "no_persist_link_story", False):
+        return {"action": "skipped", "message": "已禁用回写 link_story"}
+    if not payload.get("_explicit_story_link"):
+        return None
+    if not isinstance(story_link, dict):
+        return None
+
+    action = str(story_link.get("action", "")).strip()
+    if action in {"skipped", "need_confirm"}:
+        return None
+
+    story_id = str(story_link.get("story_id", "") or "").strip()
+    story_name = str(story_link.get("story_name", "") or "").strip()
+    if not story_id and not story_name:
+        return None
+
+    config_path = resolve_config_path(args)
+    return persist_link_story_to_config(
+        config_path,
+        config,
+        story_id=story_id,
+        story_name=story_name,
+    )
 
 
 def normalize_description(summary: str, description: str) -> str:
@@ -676,6 +781,10 @@ def load_payload(args: argparse.Namespace, config: Dict[str, Any]) -> Dict[str, 
         if v is not None:
             payload[k] = v
 
+    # 记录是否由用户/本次 payload 显式指定需求（非仅读 link_story 配置）
+    if str(payload.get("story_id", "")).strip() or str(payload.get("story_name", "")).strip():
+        payload["_explicit_story_link"] = True
+
     if args.force_link_story:
         payload["force_link_story"] = True
     if args.no_link_story:
@@ -918,6 +1027,17 @@ def main() -> None:
             else None
         )
         resolved_people = payload.pop("_resolved_people", None)
+        story_link = attempt_story_link(
+            client,
+            config,
+            payload,
+            bug_id="dry-run",
+            dry_run=True,
+        )
+        link_story_persist = maybe_persist_explicit_link_story(
+            args, config, payload, story_link
+        )
+        payload.pop("_explicit_story_link", None)
         print(
             json.dumps(
                 {
@@ -925,29 +1045,36 @@ def main() -> None:
                     "payload": payload,
                     "resolved_people": resolved_people,
                     "iteration_name": iteration_name,
-                    "config_file": str((Path(args.config_file).resolve() if args.config_file else DEFAULT_CONFIG_FILE)),
+                    "config_file": str(resolve_config_path(args)),
                     "image_paths": image_paths,
                     "attachment_paths": attachment_paths,
                     "attachment_upload": attachment_upload_enabled(args, payload, config),
                     "embed_images": embed_result,
                     "state_file": str(state_path),
                     "idempotency_key": idempotency_key,
-                    "story_link": attempt_story_link(
-                        client,
-                        config,
-                        payload,
-                        bug_id="dry-run",
-                        dry_run=True,
-                    ),
+                    "story_link": story_link,
+                    "link_story_persist": link_story_persist,
                 },
                 ensure_ascii=False,
             )
         )
         return
 
-    # 内部元数据勿提交给 TAPD
+    # 内部元数据勿提交给 TAPD；story_* 仅用于关联，不写入 bugs 创建体
     payload.pop("_resolved_people", None)
     payload.pop("_embed_images_cfg", None)
+    explicit_story_link = bool(payload.pop("_explicit_story_link", None))
+    story_link_fields = {
+        "story_id": payload.pop("story_id", None),
+        "story_name": payload.pop("story_name", None),
+        "story_url": payload.pop("story_url", None),
+        "force_link_story": payload.pop("force_link_story", None),
+        "skip_link_story": payload.pop("skip_link_story", None),
+    }
+    # 关联阶段仍需要显式需求信息
+    link_context = {k: v for k, v in story_link_fields.items() if v not in (None, "")}
+    if explicit_story_link:
+        link_context["_explicit_story_link"] = True
 
     record = state.get("records", {}).get(idempotency_key, {})
     if not isinstance(record, dict):
@@ -1060,7 +1187,14 @@ def main() -> None:
         )
         save_submit_state(state_path, state)
 
-    story_link = attempt_story_link(client, config, payload, bug_id, dry_run=False)
+    link_payload_for_story = dict(payload)
+    link_payload_for_story.update(link_context)
+    story_link = attempt_story_link(
+        client, config, link_payload_for_story, bug_id, dry_run=False
+    )
+    link_story_persist = maybe_persist_explicit_link_story(
+        args, config, link_payload_for_story, story_link
+    )
 
     result: Dict[str, Any] = {
         "bug_id": bug_id,
@@ -1070,6 +1204,7 @@ def main() -> None:
         "idempotency_key": idempotency_key,
         "embed_images": embed_result,
         "story_link": story_link,
+        "link_story_persist": link_story_persist,
         **attachment_info,
     }
 
