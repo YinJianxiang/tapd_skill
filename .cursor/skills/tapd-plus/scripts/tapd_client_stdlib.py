@@ -29,7 +29,10 @@ import argparse
 import json
 import mimetypes
 import os
+import ssl
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -41,6 +44,10 @@ from typing import Any, Dict, Optional, Tuple
 # 默认 TAPD 云环境地址，未配置环境变量时使用
 DEFAULT_TAPD_API_BASE_URL = "https://api.tapd.cn"
 DEFAULT_TAPD_BASE_URL = "https://www.tapd.cn"
+
+# 应对 api.tapd.cn 前 WAF/链路偶发握手掐断（SSLEOFError）
+_DEFAULT_HTTP_RETRIES = 3
+_DEFAULT_RETRY_BACKOFF_SEC = 0.8
 
 # .tapd/tapd_env.json 字段 -> 环境变量名（仅当环境变量未设置时写入）
 _TAPD_ENV_FILE_MAP = {
@@ -184,6 +191,75 @@ def to_long_id(short_id: str, workspace_id: int) -> str:
     return f"{prefix}{workspace_id}{s.zfill(9)}"
 
 
+def _http_retry_config() -> Tuple[int, float]:
+    """读取重试次数与退避基数；可用环境变量覆盖。"""
+    try:
+        retries = int(os.environ.get("TAPD_HTTP_RETRIES", _DEFAULT_HTTP_RETRIES))
+    except ValueError:
+        retries = _DEFAULT_HTTP_RETRIES
+    try:
+        backoff = float(
+            os.environ.get("TAPD_HTTP_RETRY_BACKOFF", _DEFAULT_RETRY_BACKOFF_SEC)
+        )
+    except ValueError:
+        backoff = _DEFAULT_RETRY_BACKOFF_SEC
+    return max(1, retries), max(0.0, backoff)
+
+
+def _is_transient_transport_error(exc: BaseException) -> bool:
+    """握手掐断、连接重置、短暂超时等可重试传输错误。"""
+    if isinstance(exc, (TimeoutError, ConnectionError, BrokenPipeError)):
+        return True
+    if isinstance(exc, ssl.SSLError):
+        return True
+    if isinstance(exc, urllib.error.URLError):
+        reason = exc.reason
+        if isinstance(reason, BaseException):
+            return _is_transient_transport_error(reason)
+        text = str(reason).lower()
+        return any(
+            token in text
+            for token in (
+                "timed out",
+                "timeout",
+                "connection reset",
+                "connection aborted",
+                "eof",
+                "ssl",
+                "temporarily unavailable",
+            )
+        )
+    cause = getattr(exc, "__cause__", None)
+    if isinstance(cause, BaseException) and cause is not exc:
+        return _is_transient_transport_error(cause)
+    return False
+
+
+def _urlopen_json(
+    req: urllib.request.Request,
+    timeout: int,
+    *,
+    retries: Optional[int] = None,
+    backoff: Optional[float] = None,
+) -> dict:
+    """带指数退避的 urlopen + JSON 解析。"""
+    cfg_retries, cfg_backoff = _http_retry_config()
+    max_attempts = retries if retries is not None else cfg_retries
+    delay = backoff if backoff is not None else cfg_backoff
+    last_exc: Optional[BaseException] = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= max_attempts or not _is_transient_transport_error(exc):
+                raise
+            time.sleep(delay * (2 ** (attempt - 1)))
+    assert last_exc is not None
+    raise last_exc
+
+
 def request(
     method: str,
     endpoint: str,
@@ -216,8 +292,7 @@ def request(
         req_body = json.dumps(data).encode("utf-8")
 
     req = urllib.request.Request(url, data=req_body, headers=headers, method=method.upper())
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    return _urlopen_json(req, timeout)
 
 
 def _build_multipart(
@@ -299,8 +374,7 @@ def upload_attachment(
     headers["Content-Type"] = ct
 
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    return _urlopen_json(req, timeout)
 
 
 def upload_image(
@@ -337,8 +411,7 @@ def upload_image(
     headers["Content-Type"] = ct
 
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        result = json.loads(resp.read().decode("utf-8"))
+    result = _urlopen_json(req, timeout)
     if result.get("status") != 1:
         raise RuntimeError(f"upload_image 失败: {json.dumps(result, ensure_ascii=False)}")
     return result

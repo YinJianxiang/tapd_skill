@@ -254,7 +254,7 @@ def maybe_persist_explicit_link_story(
         return None
 
     action = str(story_link.get("action", "")).strip()
-    if action in {"skipped", "need_confirm"}:
+    if action in {"skipped", "need_confirm", "failed"}:
         return None
 
     story_id = str(story_link.get("story_id", "") or "").strip()
@@ -994,6 +994,39 @@ def attempt_story_link(
     )
 
 
+def safe_attempt_story_link(
+    client: Any,
+    config: Dict[str, Any],
+    payload: Dict[str, Any],
+    bug_id: str,
+    *,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    """
+    关联需求失败时不阻断主流程（缺陷已创建场景）。
+    返回结构化 story_link，便于后续单独补关联。
+    """
+    try:
+        result = attempt_story_link(
+            client, config, payload, bug_id, dry_run=dry_run
+        )
+        if isinstance(result, dict):
+            return result
+        return {"action": "skipped", "message": "关联结果为空"}
+    except Exception as exc:
+        return {
+            "action": "failed",
+            "error": "story_link_failed",
+            "message": str(exc),
+            "bug_id": bug_id,
+            "next_action": "retry_link_story",
+            "hint": (
+                "缺陷已创建；可用 link_bug_story.py --bug-id "
+                f"{bug_id} 单独补关联"
+            ),
+        }
+
+
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -1189,7 +1222,7 @@ def main() -> None:
 
     link_payload_for_story = dict(payload)
     link_payload_for_story.update(link_context)
-    story_link = attempt_story_link(
+    story_link = safe_attempt_story_link(
         client, config, link_payload_for_story, bug_id, dry_run=False
     )
     link_story_persist = maybe_persist_explicit_link_story(
