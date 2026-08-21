@@ -156,13 +156,13 @@ Copy-Item .tapd\tapd_env.template.json .tapd\tapd_env.json
 
 ## 初始化项目配置
 
-运行初始化脚本：
+用户只需提供需求标题、ID 或链接。脚本会关联该需求并写入 `link_story`，再按子需求回填测试 / 前端 / 后端处理人：
 
 ```powershell
-python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py
+python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py --story "需求标题"
 ```
 
-脚本会从模板创建或补齐 `.tapd/project_config.json`。主要字段包括：
+不传需求时，脚本仍会从模板创建或补齐 `.tapd/project_config.json`。主要字段包括：
 
 - `workspace_id`：TAPD 项目标识。
 - `defaults`：提单人、版本、迭代、标签和标题前缀。
