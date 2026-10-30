@@ -145,7 +145,7 @@ python ".../submit_bug.py" --no-link-story ...
 低置信度时用户确认后，可单独重跑关联：
 
 ```powershell
-python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
+python "{baseDir}/../tapd-link-bug-story/scripts/link_bug_story.py" `
   --bug-id <bug_id> --story-id <story_id>
 ```
 
@@ -180,7 +180,7 @@ python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
 推荐先执行配置初始化 Skill 自动生成/升级配置：
 
 ```powershell
-python ".cursor/skills/tapd-config-init/scripts/init_tapd_config.py"
+python "{baseDir}/../tapd-config-init/scripts/init_tapd_config.py"
 ```
 
 1. 复制模板为本地私有配置文件（不入库）：
@@ -306,7 +306,7 @@ python3 "{baseDir}/scripts/submit_bug.py" \
 ```powershell
 # 仍可分两步调用 tapd_client_stdlib.py
 # 1) POST bugs
-python ".cursor/skills/tapd-plus/scripts/tapd_client_stdlib.py" post --endpoint "bugs" `
+python "{baseDir}/../tapd-plus/scripts/tapd_client_stdlib.py" post --endpoint "bugs" `
   -p workspace_id=69725253 `
   -p title="登录页弱网环境下点击登录时出现白屏" `
   -p description="问题描述：...复现步骤：..." `
@@ -316,7 +316,7 @@ python ".cursor/skills/tapd-plus/scripts/tapd_client_stdlib.py" post --endpoint 
   -p reporter="提单人昵称"
 
 # 2) upload-attachment
-python ".cursor/skills/tapd-plus/scripts/tapd_client_stdlib.py" upload-attachment `
+python "{baseDir}/../tapd-plus/scripts/tapd_client_stdlib.py" upload-attachment `
   --workspace-id 69725253 `
   --entry-id 1169725253001000006 `
   --type bug `

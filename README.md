@@ -136,10 +136,12 @@ http://127.0.0.1:<监听端口>/health
 | Skill | 用途 | 示例说法 |
 |-------|------|----------|
 | `tapd-config-init` | 初始化或升级项目配置 | 「初始化 TAPD 配置」 |
+| `tapd-create-sub-stories` | 自动创建子需求并关联到父需求 | 「给这条需求补前后端子需求」 |
 | `tapd-submit-bug` | 提交缺陷并处理图片、附件和需求关联 | 「帮我提个 bug」 |
 | `tapd-link-bug-story` | 将缺陷关联到需求 | 「把这个 bug 关联需求」 |
 | `tapd-close-bug` | 关闭或解决单个、多个缺陷 | 「把刚才的 bug 关掉」 |
 | `tapd-bug-stats` | 统计缺陷并导出 Excel | 「统计本周未解决缺陷」 |
+| `tapd-qa-status` | 查询或更新测试子需求状态 | 「我负责的测试子任务有未上线的吗」 |
 | `tapd-plus` | 查询或更新 TAPD 通用实体 | 「查询当前迭代需求」 |
 
 ## 准备认证
@@ -156,10 +158,11 @@ Copy-Item .tapd\tapd_env.template.json .tapd\tapd_env.json
 
 ## 初始化项目配置
 
-用户只需提供需求标题、ID 或链接。脚本会关联该需求并写入 `link_story`，再按子需求回填测试 / 前端 / 后端处理人：
+用户只需提供需求标题、ID 或链接。脚本会关联该需求并写入 `link_story`，再按子需求回填测试 / 前端 / 后端处理人。在项目根目录执行（脚本路径按你使用的 Agent 目录二选一）：
 
 ```powershell
 python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py --story "需求标题"
+# 或：python .codebuddy\skills\tapd-config-init\scripts\init_tapd_config.py --story "需求标题"
 ```
 
 不传需求时，脚本仍会从模板创建或补齐 `.tapd/project_config.json`。主要字段包括：
@@ -174,32 +177,25 @@ python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py --story "需�
 
 项目名称、人员姓名、项目 ID、迭代名称等信息只应填写在本地配置中。
 
-## 接入 Cursor
+## 接入 Agent（Cursor / CodeBuddy / Claude Code）
 
-本仓库已经包含 `.cursor/skills/`。使用 Cursor 打开仓库后，可直接在 Agent 对话中描述任务。
+Skills 与具体 IDE 解耦：脚本通过项目根目录下的 **`.tapd/`** 定位配置，不依赖必须存在 `.cursor`。各 Agent 只是把同一套 Skill 放到各自约定目录：
 
-如需在其他项目使用，可将所需 Skill 复制到：
+| Agent | Skill 目录 |
+|-------|------------|
+| Cursor | `.cursor/skills/`（仓库已含） |
+| CodeBuddy | `.codebuddy/skills/`（仓库已含，与 Cursor 保持同步） |
+| Claude Code | `.claude/skills/`（按需从上述目录复制） |
 
-```text
-<项目根目录>/.cursor/skills/<skill-name>/
-```
-
-也可以安装到个人 Skill 目录。无论采用哪种方式，都应在包含本地 `.tapd/` 配置的项目根目录中运行。
-
-## 接入 Claude Code
-
-将 Skills 复制到项目目录：
+在其他项目复用时，把所需 Skill 目录复制到该项目对应 Agent 路径即可，例如：
 
 ```powershell
+# Claude Code
 New-Item -ItemType Directory -Force .claude\skills | Out-Null
 Copy-Item -Recurse .cursor\skills\* .claude\skills\
 ```
 
-然后在项目根目录启动 Claude Code，并通过自然语言或 Skill 名称调用。
-
-## 接入 CodeBuddy
-
-仓库中的 `.codebuddy/skills/` 为 CodeBuddy 使用的 Skill 副本。配置方式与其他 Agent 相同，并共用项目根目录下的本地 `.tapd/` 配置。
+也可安装到个人 Skill 目录。无论哪种方式，都请在包含本地 `.tapd/` 配置的项目根目录中运行；Skill 文档里的 `{baseDir}` 表示当前 Skill 根目录，不要写死 `.cursor`。
 
 ## 常见对话
 
@@ -238,10 +234,10 @@ Copy-Item -Recurse .cursor\skills\* .claude\skills\
 # 目录结构
 
 ```text
-.cursor/skills/          Cursor Skills
-.codebuddy/skills/       CodeBuddy Skills
+.cursor/skills/          Agent Skills（Cursor）
+.codebuddy/skills/       Agent Skills（CodeBuddy，内容同步）
 scripts/feishu_bug_bot/  飞书机器人服务
-.tapd/                   本地配置、模板和运行时状态
+.tapd/                   本地配置、模板和运行时状态（各 Agent 共用）
 ```
 
 Python 缓存、日志、导出文件和 `.tapd/` 下的本地配置均应由 `.gitignore` 排除。

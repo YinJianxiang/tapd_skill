@@ -31,12 +31,21 @@ description: >-
 
 ## 标准流程（用户只输入需求）
 
-用户给出需求标题 / ID / TAPD 链接后，直接执行（PowerShell 中文请用 payload 文件）：
+用户给出需求标题 / ID / TAPD 链接后：
+
+1. **Agent 先语义简化标题**为短 `defaults.name`（提单【name】前缀），再调脚本。  
+   - 保留业务含义，去掉「需求」等套话，可改写成领域惯用简称。  
+   - 例：`客户端付费小说半自动投放需求` → `客户端付费小说半自动批创`。  
+   - **禁止**用固定后缀表/死映射代替总结。
+2. 执行脚本，并用 `--set` / payload 传入总结后的 name（PowerShell 中文请用 payload 文件）：
 
 ```powershell
 $env:PYTHONIOENCODING = "utf-8"
 @'
-{ "story": "客户端付费短剧智擎版半自动投放需求" }
+{
+  "story": "客户端付费小说半自动投放需求",
+  "defaults": { "name": "客户端付费小说半自动批创" }
+}
 '@ | Set-Content -Encoding UTF8 ".tapd/config_update.json"
 
 python "{baseDir}/scripts/init_tapd_config.py" --payload-file ".tapd/config_update.json"
@@ -45,7 +54,9 @@ python "{baseDir}/scripts/init_tapd_config.py" --payload-file ".tapd/config_upda
 或：
 
 ```powershell
-python "{baseDir}/scripts/init_tapd_config.py" --story-id "1166882899001023559"
+python "{baseDir}/scripts/init_tapd_config.py" `
+  --story-id "1166882899001023559" `
+  --set "defaults.name=客户端付费小说半自动批创"
 ```
 
 脚本会：
@@ -57,7 +68,8 @@ python "{baseDir}/scripts/init_tapd_config.py" --story-id "1166882899001023559"
    - 测试子需求处理人 → `defaults.reporter`
    - 前端子需求处理人 → `module_owner_map.前端`
    - 后端子需求处理人 → `module_owner_map.后端`
-5. **没有对应子需求，或处理人为空：对应字段写成空字符串**（覆盖旧值）。
+5. 应用 `--set` / payload（含 Agent 传入的 `defaults.name`）。
+6. **没有对应子需求，或处理人为空：对应字段写成空字符串**（覆盖旧值）。
 
 多条同名需求时返回 `status=need_confirm` 与候选列表，**不写需求相关字段**。请用户改用 `story_id` 后重跑。
 
@@ -75,11 +87,12 @@ python "{baseDir}/scripts/init_tapd_config.py" --story-id "1166882899001023559"
 
 ## 对话约定
 
-1. 用户已给出需求：立刻跑脚本，把 `story_sync` 结果展示给用户（需求链接、子需求列表、写入的 reporter/前端/后端）。
+1. 用户已给出需求：先语义简化出 `defaults.name`，再跑脚本并传入；把 `story_sync` 与写入的 name / reporter / 前端 / 后端展示给用户。
 2. 用户只说「初始化」但没给需求：先模板补齐，再问需求标题或链接。
 3. 不要让用户手填前端/后端/测试负责人；这些由子需求处理人决定。
 4. 不要根据父需求处理人猜测前后端负责人。
 5. `defaults.module` 不要写入配置。
+6. `defaults.name` 必须由 Agent 按标题语义简化后传入；脚本不同步、不做后缀死映射。
 
 ## 其它更新方式
 
@@ -112,5 +125,13 @@ python "{baseDir}/scripts/init_tapd_config.py" `
 | 场景 | 用 config-init | 用 submit-bug |
 |------|----------------|---------------|
 | 按需求初始化关联与处理人 | ✅ `--story` | ❌ |
-| 改标题前缀 | ✅ `defaults.name` | 单次可传 `name` |
+| 标题前缀 `defaults.name` | ✅ Agent 语义简化后 `--set` / payload | 单次可传 `name` |
 | 本次缺陷描述 | ❌ | ✅ `title` / `description` |
+
+## 需求链接同步版本与迭代
+
+当输入需求链接、需求 ID 或需求标题时，脚本会读取根需求的 version 与 iteration_id：
+
+- defaults.version 自动写入需求的版本名称。
+- 根据 iteration_id 调用 TAPD GET iterations 获取迭代名称，并写入 defaults.iteration。
+- 若需求未设置版本或迭代，目标字段会写为空字符串，避免沿用上一次需求的配置。

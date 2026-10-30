@@ -89,9 +89,10 @@ TAPD 部分接口接受短 ID（≤9 位数字）。调用前需转为长 ID：
 | 添加评论 | POST | comments | body: workspace_id, entry_id, entry_type(bug/stories/tasks 等), author, description。 |
 | 更新评论 | POST | comments | body: workspace_id, id, description, change_creator。 |
 | 工作流流转细则 | GET | workflows/all_transitions | params: workspace_id, system(story/bug), workitem_type_id。 |
-| 工作流状态中英文映射 | GET | workflows/status_map | params: 同上。 |
-| 工作流结束状态 | GET | workflows/last_steps | params: workspace_id, system, workitem_type_id, type(可选)。 |
-| 工作项类型列表 | GET | workitem_types | params: workspace_id。 |
+| 工作流状态中英文映射 | GET | workflows/status_map | params: 同上。客户端封装：`get_workflows_status_map`。 |
+| 工作流结束状态 | GET | workflows/last_steps | params: workspace_id, system, workitem_type_id, type(可选)。客户端封装：`get_workflows_last_steps`。 |
+| 工作项类型列表 | GET | workitem_types | params: workspace_id。客户端封装：`get_workitem_types`。 |
+| 更新需求/子需求 | POST | stories | body: workspace_id, id, status 等。客户端封装：`update_story`。测试子需求状态请优先用 Skill **`tapd-qa-status`**。 |
 | 需求字段中英文 | GET | stories/get_fields_lable | params: workspace_id。 |
 | 需求字段及候选值 | GET | stories/get_fields_info | params: workspace_id。 |
 | 项目信息 | GET | workspaces/get_workspace_info | params: workspace_id。 |

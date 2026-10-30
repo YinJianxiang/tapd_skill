@@ -5,6 +5,7 @@
 - 可选 --payload-file / --set 显式更新指定字段（会覆盖）
 - 可选 --story / --story-id / --story-name：按需求写入 link_story，
   并按子需求类型回填 reporter / 前端 / 后端处理人
+- defaults.name 由调用方语义简化后经 --set / payload 传入（脚本不做死映射）
 """
 
 from __future__ import annotations
@@ -20,10 +21,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 def workspace_root() -> Path:
-    for parent in Path(__file__).resolve().parents:
-        if (parent / ".cursor").is_dir():
+    """定位项目根目录（Cursor / CodeBuddy / Claude Code 等通用）。优先 .tapd，其次 Agent 目录，再回退 cwd。"""
+    markers = (".tapd", ".cursor", ".codebuddy", ".claude")
+    candidates = list(Path(__file__).resolve().parents) + [Path.cwd()]
+    for parent in candidates:
+        if (parent / ".tapd").is_dir():
             return parent
-    raise RuntimeError("无法定位项目根目录（未找到 .cursor 目录）")
+    for parent in candidates:
+        if any((parent / m).is_dir() for m in markers[1:]):
+            return parent
+    raise RuntimeError("无法定位项目根目录（未找到 .tapd / .cursor / .codebuddy / .claude）")
 
 
 DEFAULT_TEMPLATE = workspace_root() / ".tapd" / "project_config.template.json"
@@ -443,6 +450,30 @@ def fetch_story(client: Any, workspace_id: str, story_id: str) -> Dict[str, Any]
     return story
 
 
+def fetch_iteration(
+    client: Any, workspace_id: str, iteration_id: str
+) -> Dict[str, Any]:
+    """Resolve a TAPD iteration by the iteration_id stored on a story."""
+    iid = str(iteration_id or "").strip()
+    if not iid or iid in {"0", "null", "None"}:
+        return {}
+    resp = client.request(
+        "GET",
+        "iterations",
+        params={
+            "workspace_id": workspace_id,
+            "id": iid,
+            "limit": 1,
+        },
+    )
+    return extract_entity(resp, "Iteration")
+
+
+def story_version(story: Dict[str, Any]) -> str:
+    """TAPD exposes the story version as the version field value."""
+    return str(story.get("version") or "").strip()
+
+
 def search_stories_by_name(client: Any, workspace_id: str, name: str) -> List[Dict[str, Any]]:
     name_norm = (name or "").strip()
     if not name_norm:
@@ -633,15 +664,23 @@ def map_child_owners(
     return owners, details
 
 
-def build_story_update(story: Dict[str, Any], owners: Dict[str, str]) -> Dict[str, Any]:
+def build_story_update(
+    story: Dict[str, Any],
+    owners: Dict[str, str],
+    iteration_name: str = "",
+) -> Dict[str, Any]:
+    version = story_version(story)
+    story_name = str(story.get("name") or "").strip()
     return {
         "link_story": {
             "enabled": True,
             "story_id": str(story.get("id") or "").strip(),
-            "story_name": str(story.get("name") or "").strip(),
+            "story_name": story_name,
         },
         "defaults": {
             "reporter": owners.get("测试") or "",
+            "version": version,
+            "iteration": iteration_name,
         },
         "module_owner_map": {
             "前端": owners.get("前端") or "",
@@ -699,7 +738,11 @@ def sync_story_config(
     assert story is not None
     children = fetch_child_stories(client, workspace_id, story)
     owners, child_details = map_child_owners(children, type_map)
-    payload = build_story_update(story, owners)
+    iteration = fetch_iteration(
+        client, workspace_id, str(story.get("iteration_id") or "")
+    )
+    iteration_name = str(iteration.get("name") or "").strip()
+    payload = build_story_update(story, owners, iteration_name)
     if not str((read_json(target_path) if target_path.is_file() else {}).get("workspace_id") or "").strip():
         payload["workspace_id"] = workspace_id
 
@@ -713,6 +756,10 @@ def sync_story_config(
             "defaults.reporter": owners.get("测试") or "",
             "module_owner_map.前端": owners.get("前端") or "",
             "module_owner_map.后端": owners.get("后端") or "",
+        },
+        "defaults": {
+            "version": story_version(story),
+            "iteration": iteration_name,
         },
         "payload": payload,
         "message": (

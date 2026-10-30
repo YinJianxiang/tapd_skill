@@ -28,7 +28,7 @@ description: 按时间、创建人、软件平台、简单问题标签统计 TAP
 ## 执行方式（必做）
 
 ```powershell
-python ".cursor/skills/tapd-bug-stats/scripts/bug_stats_report.py" `
+python "{baseDir}/scripts/bug_stats_report.py" `
   --start-date 2026-06-08 `
   --end-date 2026-06-11 `
   --open-only `
@@ -86,16 +86,16 @@ JSON stdout 含：`brief`、`summary`（含 `by_platform`、`by_simple_label`、
 
 ```powershell
 # 殷健翔本周创建的未解决 bug
-python ".cursor/skills/tapd-bug-stats/scripts/bug_stats_report.py" `
+python "{baseDir}/scripts/bug_stats_report.py" `
   --start-date 2026-06-08 --end-date 2026-06-11 `
   --open-only --reporter 殷健翔
 
 # 后端平台 + 仅简单问题
-python ".cursor/skills/tapd-bug-stats/scripts/bug_stats_report.py" `
+python "{baseDir}/scripts/bug_stats_report.py" `
   --platform 后端 --simple-label only
 
 # 按软件平台作为主 stats 维度
-python ".cursor/skills/tapd-bug-stats/scripts/bug_stats_report.py" `
+python "{baseDir}/scripts/bug_stats_report.py" `
   --group-by platform --open-only
 ```
 

@@ -55,10 +55,16 @@ _local_tapd_env_loaded = False
 
 
 def workspace_root() -> Path:
-    for parent in Path(__file__).resolve().parents:
-        if (parent / ".cursor").is_dir():
+    """定位项目根目录（Cursor / CodeBuddy / Claude Code 等通用）。优先 .tapd，其次 Agent 目录，再回退 cwd。"""
+    markers = (".tapd", ".cursor", ".codebuddy", ".claude")
+    candidates = list(Path(__file__).resolve().parents) + [Path.cwd()]
+    for parent in candidates:
+        if (parent / ".tapd").is_dir():
             return parent
-    raise RuntimeError("无法定位项目根目录（未找到 .cursor 目录）")
+    for parent in candidates:
+        if any((parent / m).is_dir() for m in markers[1:]):
+            return parent
+    raise RuntimeError("无法定位项目根目录（未找到 .tapd / .cursor / .codebuddy / .claude）")
 
 
 def default_tapd_env_path() -> Path:
@@ -352,6 +358,57 @@ def get_releases(workspace_id: int, options: Optional[dict] = None) -> dict:
     if options:
         params.update(options)
     return request("GET", "releases", params=params)
+
+
+def get_workitem_types(workspace_id: int, options: Optional[dict] = None) -> dict:
+    """获取需求类别（workitem_types）列表。"""
+    params = {"workspace_id": workspace_id, "limit": 50}
+    if options:
+        params.update(options)
+    return request("GET", "workitem_types", params=params)
+
+
+def get_workflows_status_map(
+    workspace_id: int,
+    workitem_type_id: str,
+    *,
+    system: str = "story",
+) -> dict:
+    """获取工作流状态中英文映射（如 open→未开始、status_19→已上线）。"""
+    return request(
+        "GET",
+        "workflows/status_map",
+        params={
+            "workspace_id": workspace_id,
+            "system": system,
+            "workitem_type_id": workitem_type_id,
+        },
+    )
+
+
+def get_workflows_last_steps(
+    workspace_id: int,
+    *,
+    system: str = "story",
+    workitem_type_id: Optional[str] = None,
+) -> dict:
+    """获取工作流结束状态（如已上线、需求作废）。"""
+    params: Dict[str, Any] = {"workspace_id": workspace_id, "system": system}
+    if workitem_type_id:
+        params["workitem_type_id"] = workitem_type_id
+    return request("GET", "workflows/last_steps", params=params)
+
+
+def update_story(
+    workspace_id: int,
+    story_id: str,
+    fields: Optional[dict] = None,
+) -> dict:
+    """更新需求/子需求（POST stories，需带 id）。常用于改 status、owner 等。"""
+    data: Dict[str, Any] = {"workspace_id": workspace_id, "id": story_id}
+    if fields:
+        data.update(fields)
+    return request("POST", "stories", data=data)
 
 
 def _cli():

@@ -73,9 +73,10 @@
 | 方法 | 端点 | 主要参数 | 说明 |
 |------|------|----------|------|
 | GET | workflows/all_transitions | workspace_id, system(story/bug), workitem_type_id | 流转细则。 |
-| GET | workflows/status_map | workspace_id, system, workitem_type_id | 状态中英文映射。 |
-| GET | workflows/last_steps | workspace_id, system, workitem_type_id, type(可选) | 结束状态。 |
-| GET | workitem_types | workspace_id | 需求类别列表。 |
+| GET | workflows/status_map | workspace_id, system, workitem_type_id | 状态中英文映射。封装：`get_workflows_status_map`。 |
+| GET | workflows/last_steps | workspace_id, system, workitem_type_id, type(可选) | 结束状态。封装：`get_workflows_last_steps`。 |
+| GET | workitem_types | workspace_id | 需求类别列表。封装：`get_workitem_types`。 |
+| POST | stories | workspace_id, id, status 等 | 更新需求/子需求。封装：`update_story`；测试子需求状态见 Skill `tapd-qa-status`。 |
 
 ---
 

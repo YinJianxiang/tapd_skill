@@ -72,7 +72,7 @@ description: >-
 
 ```powershell
 $env:PYTHONIOENCODING = "utf-8"
-python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
+python "{baseDir}/scripts/link_bug_story.py" `
   --bug-id 1166882899001055405 `
   --dry-run
 ```
@@ -82,7 +82,7 @@ python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
 ### 显式指定需求
 
 ```powershell
-python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
+python "{baseDir}/scripts/link_bug_story.py" `
   --bug-id 1055405 `
   --story-id 1166882899001022116
 ```
@@ -90,7 +90,7 @@ python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
 ### 仅预览匹配候选
 
 ```powershell
-python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
+python "{baseDir}/scripts/link_bug_story.py" `
   --bug-id 1055405 `
   --match-only
 ```
@@ -106,7 +106,7 @@ $payload = Join-Path $env:TEMP "tapd_link_payload.json"
 }
 '@ | Set-Content -Encoding UTF8 $payload
 
-python ".cursor/skills/tapd-link-bug-story/scripts/link_bug_story.py" `
+python "{baseDir}/scripts/link_bug_story.py" `
   --payload-file $payload `
   --config-file ".tapd/project_config.json"
 ```

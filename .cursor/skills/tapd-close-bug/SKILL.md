@@ -64,7 +64,7 @@ description: 关闭或解决 TAPD 缺陷（支持单个/批量；按 bug id、�
 ### 单个关闭
 
 ```powershell
-python ".cursor/skills/tapd-close-bug/scripts/close_bug.py" `
+python "{baseDir}/scripts/close_bug.py" `
   --bug-id 1166882899001055244 `
   --dry-run
 ```
@@ -72,7 +72,7 @@ python ".cursor/skills/tapd-close-bug/scripts/close_bug.py" `
 ### 批量关闭（多个 ID）
 
 ```powershell
-python ".cursor/skills/tapd-close-bug/scripts/close_bug.py" `
+python "{baseDir}/scripts/close_bug.py" `
   --bug-ids "1166882899001055243,1166882899001055244" `
   --comment "复测通过，批量关闭。" `
   --dry-run
@@ -92,7 +92,7 @@ python ".cursor/skills/tapd-close-bug/scripts/close_bug.py" `
 }
 '@ | Set-Content -Encoding UTF8 ".tapd/tapd_close_payload.json"
 
-python ".cursor/skills/tapd-close-bug/scripts/close_bug.py" `
+python "{baseDir}/scripts/close_bug.py" `
   --payload-file ".tapd/tapd_close_payload.json" `
   --dry-run
 ```

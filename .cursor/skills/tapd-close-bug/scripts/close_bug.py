@@ -34,10 +34,16 @@ DEFAULT_CLOSE_STATUS = "closed"
 
 
 def workspace_root() -> Path:
-    for parent in Path(__file__).resolve().parents:
-        if (parent / ".cursor").is_dir():
+    """定位项目根目录（Cursor / CodeBuddy / Claude Code 等通用）。优先 .tapd，其次 Agent 目录，再回退 cwd。"""
+    markers = (".tapd", ".cursor", ".codebuddy", ".claude")
+    candidates = list(Path(__file__).resolve().parents) + [Path.cwd()]
+    for parent in candidates:
+        if (parent / ".tapd").is_dir():
             return parent
-    raise RuntimeError("无法定位项目根目录（未找到 .cursor 目录）")
+    for parent in candidates:
+        if any((parent / m).is_dir() for m in markers[1:]):
+            return parent
+    raise RuntimeError("无法定位项目根目录（未找到 .tapd / .cursor / .codebuddy / .claude）")
 
 
 def find_tapd_client_script() -> Path:
