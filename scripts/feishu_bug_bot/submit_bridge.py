@@ -10,26 +10,11 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-
-def workspace_root() -> Path:
-    markers = (".tapd", ".cursor", ".codebuddy", ".claude")
-    candidates = list(Path(__file__).resolve().parents) + [Path.cwd()]
-    for parent in candidates:
-        if (parent / ".tapd").is_dir():
-            return parent
-    for parent in candidates:
-        if any((parent / m).is_dir() for m in markers[1:]):
-            return parent
-    raise RuntimeError("无法定位项目根目录")
+from tapd_paths import skill_script, workspace_root
 
 
 def find_submit_bug_script() -> Path:
-    root = workspace_root()
-    for skills_dir in (".cursor", ".codebuddy", ".claude"):
-        candidate = root / skills_dir / "skills" / "tapd-submit-bug" / "scripts" / "submit_bug.py"
-        if candidate.is_file():
-            return candidate
-    raise FileNotFoundError("未找到 submit_bug.py（已查 .cursor/.codebuddy/.claude/skills）")
+    return skill_script("tapd-submit-bug", "submit_bug.py")
 
 
 def build_payload_from_draft(draft: Dict[str, Any]) -> Dict[str, Any]:

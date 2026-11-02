@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from submit_bridge import workspace_root
+from tapd_paths import skill_script, workspace_root
 
 RECENT_BUG_STATUS = "resolved"  # TAPD：已解决未关闭
 QUERY_LIMIT = 10
@@ -62,10 +62,7 @@ _TAPD_ENV_KEYS = (
 
 
 def _ensure_tapd_client() -> Any:
-    root = workspace_root()
-    client_dir = root / ".cursor" / "skills" / "tapd-plus" / "scripts"
-    if not client_dir.is_dir():
-        raise FileNotFoundError(f"未找到 tapd-plus scripts: {client_dir}")
+    client_dir = skill_script("tapd-plus", "tapd_client_stdlib.py").parent
     path = str(client_dir)
     if path not in sys.path:
         sys.path.insert(0, path)

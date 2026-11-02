@@ -127,6 +127,124 @@ http://127.0.0.1:<监听端口>/health
 
 机器人代码位于 `scripts/feishu_bug_bot/`。
 
+## 钉钉多维表同步测试子需求状态
+
+读取配置用户负责的多维表记录，按状态同步 **TAPD 测试子需求（QA Story）**，或调用 `tapd-config-init` 更新本地需求配置。运行不依赖 Agent 或大模型，需要 Python、已安装并登录的 DWS CLI，以及现有 TAPD 认证配置。
+
+**多维表始终只读，禁止修改其状态或其他数据。** 线上写操作只针对 TAPD 测试子需求。
+
+### 手动触发
+
+在项目根目录打开 PowerShell。先预览：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_dingtalk_status_sync.ps1
+```
+
+预览会读取多维表和 TAPD，显示拟执行操作，不修改 TAPD 工作项或需求配置。确认后正式执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_dingtalk_status_sync.ps1 -Apply
+```
+
+这两个命令均自动加载 `.tapd/dingtalk_status_sync.ps1`，无需手动设置环境变量。运行时间、退出码和结果保存在 `.tapd/dingtalk_status_sync_last_result.json`；预览结果也会保存到该文件。手动执行不会安装、修改或触发定时任务。
+
+### 状态处理规则
+
+| 多维表状态 | TAPD 测试子需求状态 | 没有测试子需求时 |
+|------------|--------------------|------------------|
+| 已提测 | 开始测试 | 创建测试子需求，挂到关联父需求下 |
+| 测试中 | 直接调用 tapd-config-init 刷新本地配置 | 不创建或修改 TAPD 状态 |
+| 待上线 | 测试完成 | 报告缺失并跳过该记录 |
+| 测试完成 | 已上线 | 报告缺失并跳过该记录 |
+
+涉及 TAPD 状态变更时，目标状态名称必须存在于项目的 QA 工作流中，脚本会动态校验，遇到未知或歧义状态时停止。「测试中」按多维表中的状态判断，直接刷新本地配置，不要求 TAPD 当前状态也是测试中。
+
+只读取配置用户负责的记录，按「负责人」筛选，创建人不参与筛选。用户依次取 `TAPD_SYNC_USER`、`CURRENT_USER_NICK`、`.tapd/tapd_env.json` 的 `current_user_nick`、项目配置的 `defaults.reporter`，然后通过钉钉姓名精确解析唯一人员。无法唯一解析时停止，禁止回退到读取所有人的记录。
+
+默认字段与实际业务表一致：`负责人`（人员列）、`任务进度`（单选状态）、`需求`（标题正文）、`需求链接`（链接）。优先从链接列或需求正文中提取明确的 TAPD Story 链接，兼容 `/tapd_fe/<项目>/story/detail/<ID>`；没有 TAPD 链接时，只接受唯一同名父需求。无精确匹配的记录标为 `skipped_unmatched_story`，不会按近似标题更新。
+
+关联父需求时，自动定位其唯一测试子需求。前端、后端子需求不会被更新。多条测试子需求、同一目标存在冲突映射时，会在写入前停止。
+
+### 本地配置
+
+在 `.tapd/dingtalk_status_sync.ps1` 中配置读取哪张表、各列的名称或字段 ID。`BASE_ID` 定位多维表文件，`TABLE_ID` 定位该文件内的具体数据表。更换数据表时，需要一起核对四个字段配置。
+
+配置文件内容示例，真实值只保存在本机：
+
+```powershell
+$env:DINGTALK_AITABLE_BASE_ID = "<Base ID>"
+$env:DINGTALK_AITABLE_TABLE_ID = "<Table ID>"
+$env:DINGTALK_AITABLE_STORY_FIELD = "需求链接"
+$env:DINGTALK_AITABLE_STATUS_FIELD = "任务进度"
+$env:DINGTALK_AITABLE_OWNER_FIELD = "负责人"
+$env:DINGTALK_AITABLE_TITLE_FIELD = "需求"
+$env:TAPD_WORKSPACE_ID = "<TAPD 项目 ID>"
+```
+
+`TAPD_WORKSPACE_ID` 未设置时读取 `.tapd/project_config.json`。脚本先读完整表头解析字段与选项，再只查询上述四列；服务端同时筛选配置用户和映射中涉及的状态，返回后再次核验人员 ID。最多读取 10 页、每页 100 条；分页失败或结果不完整时不写入 TAPD。
+
+`.tapd/dingtalk_status_sync.ps1` 被 Git 忽略，手动触发入口和定时任务都会自动加载它。底层 Python 脚本不自动加载该文件或 `.env`。真实表 ID、人员 ID 等不要写入仓库源码或 README。
+
+可选环境变量：
+
+| 变量 | 说明 |
+|------|------|
+| `TAPD_STATUS_SYNC_MAP` | JSON 状态映射，默认包含已提测、待上线、测试完成三项；设置后替换这三项映射。「测试中」固定触发本地配置更新 |
+| `TAPD_SYNC_USER` | 显式指定同步用户；默认复用现有 TAPD 用户配置，必须唯一解析钉钉人员 |
+| `TAPD_QA_TYPE_ID` | 测试子需求类型 ID；通常自动识别，有歧义时指定，仍会核验 QA 类型 |
+| `TAPD_QA_OWNER` | 新建测试子需求的处理人；默认与同步配置用户相同 |
+| `DINGTALK_AITABLE_FILTERS_JSON` | 附加的扁平 AND 筛选 JSON；与人员、状态条件取交集，不能扩大用户范围；字段和选项须使用实际 ID |
+
+例如，显式设置与默认值相同的映射：
+
+```powershell
+$env:TAPD_STATUS_SYNC_MAP = '{"已提测":"开始测试","待上线":"测试完成","测试完成":"已上线"}'
+```
+
+仅需检查多维表记录、不访问 TAPD 时，可在加载配置后直接调用底层脚本：
+
+```powershell
+$env:PYTHONIOENCODING = "utf-8"
+. .\.tapd\dingtalk_status_sync.ps1
+python scripts\sync_dingtalk_status.py --source-only
+```
+
+### 执行结果与异常处理
+
+重复执行会跳过已是目标状态的子需求。正式执行前会重新检查目标状态或子需求是否已存在，写后独立查询验证。遇到未确认的写入结果会停止后续操作，不自动重放写请求；已完成项保留在输出中，其余 `would_update` / `would_create` / `would_refresh_config` 表示尚未执行。
+
+原有三种状态同步规则保持不变。配置回填以多维表为准：扫描配置用户负责的记录，**当多维表“任务进度”为“测试中”时，直接调用公共 `tapd-config-init` 更新对应需求的本地配置**。不要求先修改 TAPD 状态，也不再要求 TAPD 当前状态为测试中；“测试中”分支本身不创建或更新 TAPD 工作项。失败待重试项仅在本轮源表中仍属于该用户且为“测试中”时继续回填。
+
+配置按父需求刷新处理人、版本、迭代和关联需求，保存在 `.tapd/story_configs/<workspace_id>/<parent_id>.json`，同一父需求只刷新一次。仅当该父需求与当前 `.tapd/project_config.json` 的关联一致时，才同时刷新全局配置，批量同步不会将全局关联切换到最后一条需求。预览不修改本地配置。
+
+回填失败会保留 TAPD 已完成结果，并在 `config_refresh` 中报告；待刷新需求记录在 `.tapd/dingtalk_config_refresh_pending.json`，下次正式同步会重试配置回填，不重复创建或更新 TAPD。
+
+创建前的意图保存在 `.tapd/dingtalk_status_sync_pending.json`。若创建结果未知且仍查不到子需求，后续运行会阻止再次创建；需要先在 TAPD 核实，确定没有创建后才能清理对应父需求的待核实条目。`.tapd/dingtalk_status_sync.lock` 防止本仓库同时执行多个同步进程；异常退出留下的锁也应在核实待创建记录后清理。这两个文件均不提交 Git。
+
+### 自动同步（Windows）
+
+配置并登录 DWS 后，在项目根目录执行一次，即可安装当前 Windows 用户的定时任务。默认每天北京时间 **19:00** 自动执行一次正式同步，不需要保持 PowerShell 窗口打开；电脑需要开机且该用户保持登录，锁屏不影响运行。安装脚本要求 Windows 使用无夏令时的 UTC+08:00 时区；不会修改系统时区。错过当天时间时不补跑，等待次日 19:00。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\manage_dingtalk_status_sync.ps1 -Action Install
+```
+
+定时任务与手动 `-Apply` 使用同一套处理逻辑，每次自动加载本地表格和用户配置。多维表只读，「测试中」刷新本地配置，另外三种状态按规则处理 TAPD 测试子需求。同一任务不会重叠运行，不自动重放未知写入。不同仓库使用独立任务名称，重复安装会更新当前仓库的任务。可加 `-DailyAt "19:00"` 显式指定执行时间，加 `-WhatIf` 仅预览安装操作。修改执行时间后须重新安装任务；修改本地表格配置无需重新安装。
+
+```powershell
+# 查看运行状态
+powershell -File scripts\manage_dingtalk_status_sync.ps1 -Action Status
+# 暂停后续自动运行，已运行的同步可能继续完成
+powershell -File scripts\manage_dingtalk_status_sync.ps1 -Action Pause
+# 恢复自动运行
+powershell -File scripts\manage_dingtalk_status_sync.ps1 -Action Resume
+# 删除定时任务，保留本地配置和结果
+powershell -File scripts\manage_dingtalk_status_sync.ps1 -Action Remove
+```
+
+最近一次运行的时间、退出码和结果保存在 `.tapd/dingtalk_status_sync_last_result.json`。返回结果失败时，根据其中的诊断修复配置或核实待创建记录；任务仍按计划运行。需要常年运行且不依赖个人电脑登录时，应部署到持续在线的运行环境，并单独准备该环境的 DWS 登录与 TAPD 配置。
+
 ---
 
 # 第二部分：Agent Skills
@@ -158,11 +276,10 @@ Copy-Item .tapd\tapd_env.template.json .tapd\tapd_env.json
 
 ## 初始化项目配置
 
-用户只需提供需求标题、ID 或链接。脚本会关联该需求并写入 `link_story`，再按子需求回填测试 / 前端 / 后端处理人。在项目根目录执行（脚本路径按你使用的 Agent 目录二选一）：
+用户只需提供需求标题、ID 或链接。脚本会关联该需求并写入 `link_story`，再按子需求回填测试 / 前端 / 后端处理人。在项目根目录执行公共脚本：
 
 ```powershell
-python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py --story "需求标题"
-# 或：python .codebuddy\skills\tapd-config-init\scripts\init_tapd_config.py --story "需求标题"
+python skills\tapd-config-init\scripts\init_tapd_config.py --story "需求标题"
 ```
 
 不传需求时，脚本仍会从模板创建或补齐 `.tapd/project_config.json`。主要字段包括：
@@ -179,23 +296,19 @@ python .cursor\skills\tapd-config-init\scripts\init_tapd_config.py --story "需�
 
 ## 接入 Agent（Cursor / CodeBuddy / Claude Code）
 
-Skills 与具体 IDE 解耦：脚本通过项目根目录下的 **`.tapd/`** 定位配置，不依赖必须存在 `.cursor`。各 Agent 只是把同一套 Skill 放到各自约定目录：
+公共实现和完整 Skill 文档统一存放在 `skills/`。飞书机器人直接调用公共脚本；`.tapd/` 负责本地配置和运行时状态。
 
-| Agent | Skill 目录 |
-|-------|------------|
-| Cursor | `.cursor/skills/`（仓库已含） |
-| CodeBuddy | `.codebuddy/skills/`（仓库已含，与 Cursor 保持同步） |
-| Claude Code | `.claude/skills/`（按需从上述目录复制） |
+| 目录 | 职责 |
+|------|------|
+| `skills/` | 唯一维护的 Skill 文档、执行脚本和参考资料 |
+| `.cursor/skills/` | Cursor 发现入口，文档指向公共 Skill，旧脚本路径转发到公共实现 |
+| `.codebuddy/skills/` | CodeBuddy 发现入口，文档指向公共 Skill，旧脚本路径转发到公共实现 |
 
-在其他项目复用时，把所需 Skill 目录复制到该项目对应 Agent 路径即可，例如：
+可以删除 `.cursor/`、`.codebuddy/`，公共命令行和飞书机器人仍可运行。对应 IDE 的自动发现入口会随之移除。
 
-```powershell
-# Claude Code
-New-Item -ItemType Directory -Force .claude\skills | Out-Null
-Copy-Item -Recurse .cursor\skills\* .claude\skills\
-```
+接入 Claude Code 或其他 Agent 时，将完整的 `skills/` 内容复制到该 Agent 的 Skill 目录。跨项目复用时，复制完整公共 Skill 集合，保证同级 Skill 依赖可用，并在目标项目准备 `.tapd/` 配置。仓库中的 IDE 兼容入口依赖本仓库布局，不适合单独复制。
 
-也可安装到个人 Skill 目录。无论哪种方式，都请在包含本地 `.tapd/` 配置的项目根目录中运行；Skill 文档里的 `{baseDir}` 表示当前 Skill 根目录，不要写死 `.cursor`。
+Skill 文档里的 `{baseDir}` 表示公共 Skill 根目录，例如 `skills/tapd-submit-bug/`。日常修改只维护 `skills/`，无需同步两套业务实现。
 
 ## 常见对话
 
@@ -234,8 +347,9 @@ Copy-Item -Recurse .cursor\skills\* .claude\skills\
 # 目录结构
 
 ```text
-.cursor/skills/          Agent Skills（Cursor）
-.codebuddy/skills/       Agent Skills（CodeBuddy，内容同步）
+skills/                 公共 TAPD Skills、执行脚本及参考资料
+.cursor/skills/          Cursor 可选发现与兼容入口
+.codebuddy/skills/       CodeBuddy 可选发现与兼容入口
 scripts/feishu_bug_bot/  飞书机器人服务
 .tapd/                   本地配置、模板和运行时状态（各 Agent 共用）
 ```
