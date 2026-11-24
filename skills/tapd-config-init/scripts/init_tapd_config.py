@@ -16,6 +16,7 @@ import importlib.util
 import json
 import re
 import sys
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -67,6 +68,7 @@ def parse_args() -> argparse.Namespace:
         "--story",
         help="需求标题、需求 ID 或 TAPD 需求链接（优先于 payload 中的 story）",
     )
+    parser.add_argument("--business-category", choices=("基础", "自有业务", "自由业务", "新媒体"), help="每次切换需求须由用户选择业务分类")
     parser.add_argument("--story-id", dest="story_id", help="需求 ID（长 id 或短 id）")
     parser.add_argument("--story-name", dest="story_name", help="需求标题（精确优先，其次唯一模糊）")
     parser.add_argument("--story-url", dest="story_url", help="TAPD 需求链接")
@@ -663,6 +665,72 @@ def map_child_owners(
     return owners, details
 
 
+BUSINESS_PREFIXES = {"基础": ("基础功能", "基础"), "自有业务": ("自有业务", "自由业务"), "新媒体": ("新媒体",)}
+
+
+def normalize_category(value: str) -> str:
+    value = str(value or "").strip()
+    return "自有业务" if value == "自由业务" else value
+
+
+def version_date(name: str, today: date) -> date:
+    """Only accept an explicit YYMMDD/YYYYMMDD/MMDD suffix, optionally a range."""
+    match = re.search(r"(?<!\d)(\d{8}|\d{6}|\d{4})(?:-\d{4,8})?$", name)
+    if not match:
+        raise ValueError(f"无法判断版本日期，请人工选择：{name}")
+    token = match.group(1)
+    fmt = {8: "%Y%m%d", 6: "%y%m%d", 4: "%m%d"}[len(token)]
+    parsed = datetime.strptime(token, fmt).date()
+    return parsed.replace(year=today.year) if len(token) == 4 else parsed
+
+
+def unique_latest(candidates: List[Tuple[date, str, str]], kind: str) -> Tuple[date, str, str]:
+    if not candidates:
+        raise ValueError(f"该业务分类没有可用{kind}，请人工确认；未修改配置")
+    latest = max(item[0] for item in candidates)
+    winners = [item for item in candidates if item[0] == latest]
+    if len(winners) != 1:
+        raise ValueError(f"最新{kind}存在歧义，请人工选择：{[item[1] for item in winners]}")
+    return winners[0]
+
+
+def match_business_defaults(client: Any, workspace_id: str, category: str, today: Optional[date] = None) -> Dict[str, Any]:
+    category = normalize_category(category)
+    if category not in BUSINESS_PREFIXES:
+        raise ValueError("请选择业务分类：基础、自有业务、新媒体")
+    today = today or date.today()
+    result = client.request("GET", "bugs/get_fields_info", params={"workspace_id": workspace_id})
+    if result.get("status") != 1:
+        raise ValueError(f"获取版本/迭代候选失败：{result.get('info')}")
+    fields = result.get("data") or {}
+    prefixes = BUSINESS_PREFIXES[category]
+    versions = []
+    for value, label in (fields.get("version_report", {}).get("options") or {}).items():
+        name = str(label)
+        if name.startswith(prefixes):
+            stamp = version_date(name, today)
+            if stamp <= today:
+                versions.append((stamp, name, str(value)))
+    version = unique_latest(versions, "发现版本")
+    iteration_options = fields.get("iteration_id", {}).get("options") or {}
+    ids = [str(key) for key, label in iteration_options.items() if str(label).startswith(prefixes)]
+    iterations = []
+    for offset in range(0, len(ids), 100):
+        response = client.request("GET", "iterations", params={"workspace_id": workspace_id, "id": ",".join(ids[offset:offset + 100]), "limit": 100, "fields": "id,name,startdate,created"})
+        if response.get("status") != 1:
+            raise ValueError("读取迭代日期失败，未修改配置")
+        for wrapped in response.get("data") or []:
+            item = wrapped.get("Iteration") or wrapped
+            if str(item.get("id")) not in ids:
+                raise ValueError("迭代接口未正确过滤候选ID，未修改配置")
+            name = str(item.get("name") or "")
+            stamp = date.fromisoformat(str(item["startdate"])[:10]) if item.get("startdate") else version_date(name, today)
+            if stamp <= today:
+                iterations.append((stamp, name, str(item["id"])))
+    iteration = unique_latest(iterations, "迭代")
+    return {"business_category": category, "version": version[2], "version_label": version[1], "iteration": iteration[1], "iteration_id": iteration[2], "matched_on": today.isoformat()}
+
+
 def build_story_update(
     story: Dict[str, Any],
     owners: Dict[str, str],
@@ -693,10 +761,13 @@ def sync_story_config(
     target_path: Path,
     workspace_id: str,
     story_ref: Dict[str, str],
+    business_category: str = "",
 ) -> Dict[str, Any]:
     if not any(str(v).strip() for v in story_ref.values()):
         return {"status": "skipped"}
 
+    if not normalize_category(business_category):
+        return {"status": "need_confirm", "message": "请先选择业务分类：基础、自有业务（自由业务）、新媒体", "choices": list(BUSINESS_PREFIXES)}
     client = load_tapd_client()
     if not workspace_id:
         existed = read_json(target_path) if target_path.is_file() else {}
@@ -737,11 +808,11 @@ def sync_story_config(
     assert story is not None
     children = fetch_child_stories(client, workspace_id, story)
     owners, child_details = map_child_owners(children, type_map)
-    iteration = fetch_iteration(
-        client, workspace_id, str(story.get("iteration_id") or "")
-    )
-    iteration_name = str(iteration.get("name") or "").strip()
+    matched = match_business_defaults(client, workspace_id, business_category)
+    iteration_name = matched["iteration"]
     payload = build_story_update(story, owners, iteration_name)
+    payload["defaults"]["version"] = matched["version"]
+    payload["business_category"] = matched["business_category"]
     if not str((read_json(target_path) if target_path.is_file() else {}).get("workspace_id") or "").strip():
         payload["workspace_id"] = workspace_id
 
@@ -757,9 +828,10 @@ def sync_story_config(
             "module_owner_map.后端": owners.get("后端") or "",
         },
         "defaults": {
-            "version": story_version(story),
+            "version": matched["version"],
             "iteration": iteration_name,
         },
+        "business_match": matched,
         "payload": payload,
         "message": (
             "未找到子需求，reporter / 前端 / 后端按空写入"
@@ -792,6 +864,7 @@ def main() -> None:
             target_path=target_path,
             workspace_id=workspace_id,
             story_ref=story_ref,
+            business_category=args.business_category or str(update_payload.get("business_category") or ""),
         )
         if story_sync.get("status") == "matched":
             story_payload = story_sync.pop("payload", {}) or {}

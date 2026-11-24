@@ -130,8 +130,12 @@ python "{baseDir}/scripts/init_tapd_config.py" `
 
 ## 需求链接同步版本与迭代
 
-当输入需求链接、需求 ID 或需求标题时，脚本会读取根需求的 version 与 iteration_id：
+当输入需求链接、需求 ID 或需求标题时，必须先让用户选择「基础／自有业务／新媒体」；「自由业务」兼容为「自有业务」，不得猜测或默认沿用。
 
-- defaults.version 自动写入需求的版本名称。
-- 根据 iteration_id 调用 TAPD GET iterations 获取迭代名称，并写入 defaults.iteration。
-- 若需求未设置版本或迭代，目标字段会写为空字符串，避免沿用上一次需求的配置。
+- 用 `--business-category` 或 payload 的 `business_category` 传入本次选择；缺少分类返回 `need_confirm`，不写配置。
+- 实时读取 TAPD 发现版本和迭代候选；迭代按真实开始日期匹配该分类最新已开始项，版本按名称日期匹配最新不晚于今天的合法项。
+- 分别写入 defaults.version/defaults.iteration，允许不同名，禁止把不存在的迭代同名值当成版本。
+- 无匹配、日期无法解析、最新候选有歧义时中止，保留配置并请求人工选择。
+- 仅更新本地配置，不修改线上需求或历史 Bug。
+
+上述带需求的命令示例均须额外传入 `--business-category 自有业务`（以用户实际选择为准）。
